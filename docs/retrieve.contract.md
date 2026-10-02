@@ -58,7 +58,13 @@ Facade tự thêm `timings.network_ms` và `timings.backend_ms`.
 ## Cách kiểm thử một backend mới
 
 ```bash
-# 1) chạy search-router có /v1/retrieve rồi:
-RETRIEVAL_BACKEND=search-router SEARCH_ROUTER_URL=http://localhost:8888 npx tsx scripts/conformance.ts
-# 2) so sánh với engine tham chiếu: metrics chất lượng phải ≥ baseline VN_GOLDEN
+# Reference serialization/parity + adapter error semantics:
+npm run test:conformance
+
+# Core Python đang chạy thật ở :8888 → validator/adapter TypeScript:
+SEARCH_ROUTER_URL=http://127.0.0.1:8888 npm run test:conformance:production
+
+# Facade production + benchmark live:
+VIETSCOPE_URL=http://127.0.0.1:3000 npm run test:e2e:production
+VIETSCOPE_URL=http://127.0.0.1:3000 npm run benchmark:production -- --gate
 ```

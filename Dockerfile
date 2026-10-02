@@ -21,7 +21,11 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.ts ./next.config.ts
-COPY --from=builder /app/drizzle.config.json ./drizzle.config.json
+# app-migrate in docker-compose.production.yml uses the exact schema bundled
+# with this image before the facade starts.
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/src/db ./src/db
 COPY --from=builder /app/public ./public
 
 EXPOSE 3000

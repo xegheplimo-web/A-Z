@@ -3,7 +3,7 @@
 # Dependency truth lives here; `uv.lock` is the pinned+hashed artifact CI and
 # Docker consume. `requirements.txt` is GENERATED (`uv export`) for host-side
 # installs (MCP server, pip-audit) — do not hand-edit, run:
-#   uv export --frozen --no-dev --format requirements-txt -o requirements.txt
+#   uv export --frozen --no-dev --no-extra ml --format requirements-txt -o requirements.txt
 [project]
 name = "search-router"
 version = "3.0.0"
@@ -17,10 +17,10 @@ dependencies = [
     "pydantic>=2.0.0",
     "redis>=5.0",
     "ddgs>=9.14.0",
-    # AI Search pipeline
-    "sentence-transformers>=2.7.0",
-    "transformers>=4.40.0",
-    "torch>=2.1.0",
+    # ML rerank/embedding packages are optional. The production retrieval
+    # gate uses deterministic fallbacks and remote services; keeping Torch out
+    # of the API image avoids multi-GB CUDA wheels in CI and CPU deployments.
+    # Install with `uv sync --extra ml` only for in-process model execution.
     # Pin mdurl to avoid hash mismatch (transitive dep of markdown-it-py)
     "mdurl==0.1.2",
     # OpenSearch client — pinned for reproducible builds
@@ -39,6 +39,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# In-process embedding/reranking. The API remains fully functional without
+# this extra via deterministic ranking and optional remote model services.
+ml = [
+    "sentence-transformers>=2.7.0",
+    "transformers>=4.40.0",
+    "torch>=2.1.0",
+]
 # MCP adapter (adapters/mcp_server.py) — optional surface, the core
 # router never imports it. Install: `uv sync --extra mcp` or
 # `pip install search-router[mcp]` / `pip install mcp` on the host.

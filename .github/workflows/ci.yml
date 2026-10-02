@@ -42,6 +42,52 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_db
 
+  compose-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate embedded and production Compose models
+        run: |
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.production.yml --profile production config --quiet
+
+  python-core:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/search-router
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version-file: services/search-router/pyproject.toml
+          enable-cache: true
+          cache-dependency-glob: services/search-router/uv.lock
+      - name: Install frozen Python core
+        run: uv sync --frozen
+      - name: Python lint (repo error rules + strict P-NEXT surface)
+        run: |
+          uv run ruff check --select E4,E7,E9,F .
+          uv run ruff check api/retrieve.py core/unified_retrieve.py \
+            tests/test_retrieve_contract.py tests/test_retrieve_bindings.py \
+            tests/test_compose_mounts.py
+      - name: Python retrieval-core typecheck
+        run: uv run pyright -p pyright-pnextconfig.json
+      - name: Python core regression suite
+        run: uv run pytest -q -m "not e2e and not live"
+      - name: Decode Python contract fixture with TypeScript
+        working-directory: .
+        run: |
+          npm ci
+          npx tsx scripts/test-core-port.ts
+
   test:
     runs-on: ubuntu-latest
     needs: [lint, typecheck, build]
@@ -57,7 +103,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U postgres -d app_db"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -73,9 +119,9 @@ jobs:
           npx drizzle-kit push
           npx tsx src/db/seed.ts
       - name: Boundary check
-        run: node scripts/check-boundaries.mjs
-      - name: Conformance test
-        run: npx tsx scripts/conformance.ts
+        run: npm run check:boundaries
+      - name: Reference-backend conformance
+        run: npm run test:conformance
       - name: Smoke upstreams
         run: npx tsx scripts/smoke-upstreams.ts
       - name: Auth test
@@ -96,7 +142,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U postgres -d app_db"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -108,28 +154,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Start app (embedded backend)
+      - name: Start app (embedded reference backend)
         run: |
-          cp .env.example .env
           npx drizzle-kit push
           npx tsx src/db/seed.ts
-          npm start > /tmp/app.log 2>&1 &
+          RETRIEVAL_BACKEND=embedded npm start > /tmp/app.log 2>&1 &
           for i in $(seq 1 30); do
             curl -sf http://localhost:3000/api/health >/dev/null && exit 0
             sleep 1
           done
           echo "app did not become healthy"; tail -n 80 /tmp/app.log; exit 1
-      - name: E2E smoke tests
+      - name: Embedded E2E smoke tests
         run: |
           trap 'echo "== app.log tail =="; tail -n 80 /tmp/app.log || true' ERR
           set -e
-          check() { # $1=name $2=expected-substring $3..=curl args
+          check() {
             name="$1"; want="$2"; shift 2
             out=$(curl -sf "$@") || { echo "[$name] curl failed"; return 1; }
             echo "[$name] $(echo "$out" | head -c 200)"
             echo "$out" | grep -q "$want" || { echo "[$name] missing '$want'"; return 1; }
           }
-
           check health "ok" http://localhost:3000/api/health
           check models "vietscope-1" http://localhost:3000/v1/models
           check search '"results"' -X POST http://localhost:3000/v1/search \
@@ -137,8 +181,61 @@ jobs:
             -d '{"query":"quán giò chả ngon ở Yên Dũng"}'
           check places '"places"' "http://localhost:3000/v1/places/search?q=Y%C3%AAn%20D%C5%A9ng"
           check providers '"providers"' http://localhost:3000/v1/providers
-
-          echo "✅ All E2E tests passed"
+          echo "✅ Embedded E2E passed"
       - name: Cleanup
         if: always()
         run: pkill -f "next start" || true
+
+  production-retrieval-e2e:
+    runs-on: ubuntu-latest
+    needs: [e2e, python-core, compose-contract]
+    env:
+      COMPOSE_PROFILES: production
+      VIETSCOPE_API_KEYS: e2e-production-key
+      VIETSCOPE_API_KEY: e2e-production-key
+      VIETSCOPE_URL: http://127.0.0.1:3000
+      SEARCH_ROUTER_URL: http://127.0.0.1:8888
+      BENCH_RUNS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Prepare OpenSearch host
+        run: sudo sysctl -w vm.max_map_count=262144
+      - name: Start production retrieval stack
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.production.yml \
+            --profile production up -d --build --wait --wait-timeout 360
+      - name: Cross-language production conformance
+        run: npm run test:conformance:production
+      - name: Production facade E2E
+        run: npm run test:e2e:production
+      - name: Live-stack LOCAL-1 smoke benchmark
+        run: npm run benchmark:production -- --smoke --output reports/production-local1-ci.json
+      - name: Provider degradation stays bounded
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.production.yml \
+            --profile production stop searxng
+          npm run test:e2e:production -- --degraded-only
+      - name: Upload production benchmark
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-local1-report
+          path: reports/production-local1-ci.json
+          if-no-files-found: ignore
+      - name: Production stack logs
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.production.yml \
+            --profile production ps -a
+          docker compose -f docker-compose.yml -f docker-compose.production.yml \
+            --profile production logs --no-color --tail=250
+      - name: Cleanup production stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.production.yml \
+            --profile production down -v --remove-orphans

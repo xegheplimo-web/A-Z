@@ -1,13 +1,18 @@
 services:
+  # Embedded dev/reference stack. Production must be started with the
+  # docker-compose.production.yml overlay, which pins this service to the
+  # search-router backend and starts the complete retrieval stack.
   app:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${APP_DATABASE_URL:-postgresql://postgres:postgres@db:5432/app_db}
       - RETRIEVAL_BACKEND=${RETRIEVAL_BACKEND:-embedded}
+      - RETRIEVAL_FALLBACK=${RETRIEVAL_FALLBACK:-}
       - SEARCH_ROUTER_URL=${SEARCH_ROUTER_URL:-}
       - SEARCH_ROUTER_API_KEY=${SEARCH_ROUTER_API_KEY:-}
+      - SEARCH_ROUTER_TIMEOUT_MS=${SEARCH_ROUTER_TIMEOUT_MS:-30000}
       - LLM_BASE_URL=${LLM_BASE_URL:-}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_MODEL=${LLM_MODEL:-}
@@ -30,10 +35,10 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_db"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
 
 volumes:

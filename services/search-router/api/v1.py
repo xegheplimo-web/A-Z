@@ -446,17 +446,21 @@ async def _service_statuses() -> dict[str, str]:
         async with httpx.AsyncClient(timeout=1.5) as c:
             return (await c.get(f"{url}/health")).status_code == 200
 
-    probes = [
-        _probe("searxng", searxng_health()),
-        _probe("firecrawl", firecrawl_health()),
-    ]
+    # Only enabled dependencies participate in readiness. A deliberately
+    # disabled provider must not make a healthy production profile look
+    # degraded (and must not trigger outbound probes during CI).
+    probes = []
+    if settings.provider_enabled.get("searxng", True):
+        probes.append(_probe("searxng", searxng_health()))
+    if settings.provider_enabled.get("firecrawl", True):
+        probes.append(_probe("firecrawl", firecrawl_health()))
     if settings.opensearch_enabled:
         probes.append(_probe("opensearch", _os_health()))
     if settings.qdrant_enabled:
         probes.append(_probe("qdrant", _qdrant_health()))
-    if getattr(settings, "embedding_service_url", ""):
+    if settings.embedding_service_enabled and getattr(settings, "embedding_service_url", ""):
         probes.append(_probe("embedding", _http_health(settings.embedding_service_url)))
-    if getattr(settings, "reranker_service_url", ""):
+    if settings.reranker_service_enabled and getattr(settings, "reranker_service_url", ""):
         probes.append(_probe("reranker", _http_health(settings.reranker_service_url)))
 
     async def _minio_probe() -> tuple[str, str]:

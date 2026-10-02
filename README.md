@@ -1,7 +1,7 @@
-# VietScope · `vietscope-1` — Dự án hoàn chỉnh (Next.js facade + search-router core)
+# VietScope · `vietscope-1` — Production Candidate (Next.js facade + search-router core)
 
 Vietnam-first Search & Answer Engine — một model public (`vietscope-1`), một retrieval brain.
-Xem `VISION.md` (North Star + kiến trúc đóng băng), `docs/retrieve.contract.md`, `docs/PORTING-TO-SEARCH-ROUTER.md`.
+Xem `VISION.md` (North Star + kiến trúc đóng băng), `docs/retrieve.contract.md`, `docs/PORTING-TO-SEARCH-ROUTER.md`, `docs/P-NEXT-PRODUCTION-RETRIEVAL-GATE.md`.
 
 ```
 Facade (repo này)  ──  Retrieval Contract v1  ──►  Retrieval brain: search-router (production) | embedded (tham chiếu)
@@ -15,8 +15,8 @@ Facade (repo này)  ──  Retrieval Contract v1  ──►  Retrieval brain: s
 | npm | `10+/11` (đi kèm Node 22) | Cài đúng từ `package-lock.json` bằng `npm ci` |
 | Python | `3.12.x` (xem `services/search-router/pyproject.toml`: `>=3.12,<3.14`) | Core search-router bắt buộc 3.12 cho CI/Docker/pyright |
 | uv | `0.12.18` (pin trong `pyproject.toml` + Docker dùng `ghcr.io/astral-sh/uv:0.12.18`) | Quản lý venv Python, thay pip |
-| Docker + Compose | Docker `28+/29`, Compose v2 | Chạy Postgres + app |
-| Postgres | `16` (`postgres:16` / `postgres:16-alpine`) | Dev dùng Docker, CI dùng service container |
+| Docker + Compose | Docker `28+/29`, Compose v2 | Embedded dev hoặc production retrieval profile |
+| Postgres | `16` (`postgres:16` + `postgis/postgis:16-3.5-alpine`) | Facade DB và brain PostGIS DB tách riêng |
 
 > "Model" ở đây KHÔNG phải file `.gguf`/weights trong repo.
 > `vietscope-1` = Compound Search Model: Retrieval deterministic (Postgres + code trong repo)
@@ -25,18 +25,35 @@ Facade (repo này)  ──  Retrieval Contract v1  ──►  Retrieval brain: s
 
 ## Tải về + chạy lại từ đầu (máy mới, 5 phút)
 
-### Cách 1 — Docker (khuyến nghị, giống production nhất)
+### Cách 1 — Docker embedded (dev/reference)
 
 ```bash
 git clone https://github.com/xegheplimo-web/A-Z.git
 cd A-Z
-cp .env.example .env          # sửa DATABASE_URL, LLM_*, keys nếu cần
-docker compose up -d --build  # dựng postgres:16 + app Next.js
-docker compose exec app npx drizzle-kit push   # tạo schema
-docker compose exec app npx tsx src/db/seed.ts # seed admin graph + places + documents
-curl http://localhost:3000/api/health          # {"ok":true}
-curl http://localhost:3000/v1/models           # thấy vietscope-1
+cp .env.example .env
+docker compose up -d --build  # postgres:16 + Next.js, RETRIEVAL_BACKEND=embedded
+docker compose exec app npx drizzle-kit push
+docker compose exec app npx tsx src/db/seed.ts # admin graph + places + documents minh họa
+curl http://localhost:3000/api/health           # {"ok":true}
+curl http://localhost:3000/v1/models            # vietscope-1
 ```
+
+### Cách 1b — Production Retrieval Gate (khuyến nghị để kiểm production brain)
+
+```bash
+# Dựng facade + search-router + PostGIS + Redis + OpenSearch + Qdrant + SearXNG.
+# Overlay ép RETRIEVAL_BACKEND=search-router và RETRIEVAL_FALLBACK="".
+docker compose -f docker-compose.yml -f docker-compose.production.yml \
+  --profile production up -d --build --wait
+
+SEARCH_ROUTER_URL=http://127.0.0.1:8888 npm run test:conformance:production
+VIETSCOPE_URL=http://127.0.0.1:3000 npm run test:e2e:production
+VIETSCOPE_URL=http://127.0.0.1:3000 npm run benchmark:production -- --smoke
+# Sau khi import dữ liệu live có nhãn:
+VIETSCOPE_URL=http://127.0.0.1:3000 npm run benchmark:production -- --gate
+```
+
+`app-migrate` tự áp schema facade trước khi app lên. `search-router` tự áp migration vào DB PostGIS riêng; không dùng chung các bảng embedded. Port core chỉ bind `127.0.0.1:8888`.
 
 ### Cách 2 — Chạy tay (dev)
 
@@ -97,11 +114,20 @@ SEARCH_ROUTER_URL=http://127.0.0.1:8888
 ## Kiểm thử
 
 ```bash
-node scripts/check-boundaries.mjs
-npx tsx scripts/conformance.ts
+npm run check:boundaries
+npm run test:conformance                  # reference/adapter error semantics
+npm run test:conformance:production       # Python core thật → TypeScript adapter
+npm run test:e2e:production               # retrieve/search/places/responses/stream/auth
+npm run benchmark:production -- --gate    # 5 local query live; không dùng fixture
 npx tsx scripts/smoke-upstreams.ts
 npx tsx scripts/test-auth.ts
-npx tsx scripts/bench-scale.ts
+
+cd services/search-router
+uv sync --frozen
+uv run ruff check --select E4,E7,E9,F .
+uv run ruff check api/retrieve.py core/unified_retrieve.py tests/test_retrieve_contract.py tests/test_retrieve_bindings.py tests/test_compose_mounts.py
+uv run pyright -p pyright-pnextconfig.json
+uv run pytest -q -m "not e2e and not live"
 ```
 
 ## Ví dụ

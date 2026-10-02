@@ -5,7 +5,7 @@ Only external I/O is stubbed. This catches wrong signatures hidden by a fake fac
 import asyncio
 from types import SimpleNamespace
 
-import api.v1 as v1
+from api import v1
 from core.unified_retrieve import ExistingCoreServices, UnifiedRetriever
 from models import Source
 

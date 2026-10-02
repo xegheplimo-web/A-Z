@@ -1,103 +1,83 @@
-"""Compose mount contract: host bind-mount sources used by default-profile
-services must exist in a fresh clone.
+"""Production Compose contract for the first-class retrieval brain."""
 
-Regression guard for the P0.4 finding — `firecrawl-postgres` mounted
-`./firecrawl/postgres-init/01-postgis.sql`, a path the firecrawl submodule
-does not track. On a fresh volume Docker creates a *directory* at the mount
-target; the postgres entrypoint `*.sql` glob then feeds that directory to
-psql, the container exits 1, and `firecrawl-api` never starts behind its
-`service_healthy` dependency. A long-lived volume skips initdb entirely,
-which is why the break only surfaces on a fresh clone/volume.
-"""
-
-import re
 from pathlib import Path
 
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-COMPOSE_FILE = REPO_ROOT / "docker-compose.yml"
-INITDB_DIR = "/docker-entrypoint-initdb.d"
-_WINDOWS_ABS = re.compile(r"^[A-Za-z]:[\\/]")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+BASE_FILE = REPO_ROOT / "docker-compose.yml"
+PRODUCTION_FILE = REPO_ROOT / "docker-compose.production.yml"
 
 
-def _load_services() -> dict:
-    # A parse failure raises here — the test fails loudly instead of
-    # silently passing on an unreadable compose file.
-    compose = yaml.safe_load(COMPOSE_FILE.read_text(encoding="utf-8"))
-    assert isinstance(compose, dict), f"{COMPOSE_FILE} did not parse to a mapping"
-    services = compose.get("services")
-    assert isinstance(services, dict) and services, f"{COMPOSE_FILE} defines no services"
-    return services
+def _load(path: Path) -> dict:
+    value = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert isinstance(value, dict), f"{path} did not parse to a mapping"
+    assert isinstance(value.get("services"), dict), f"{path} defines no services"
+    return value
 
 
-def _iter_mounts(service: dict):
-    """Yield (source, target) pairs for every mount entry of one service."""
-    for entry in service.get("volumes") or []:
-        if isinstance(entry, str):
-            parts = entry.split(":")
-            # Drive-letter source ("C:\\src:/dst[:opts]") splits into 3+ parts.
-            if len(parts) >= 3 and _WINDOWS_ABS.match(parts[0] + ":" + parts[1]):
-                source, target = parts[0] + ":" + parts[1], parts[2]
-            elif len(parts) >= 2:
-                source, target = parts[0], parts[1]
-            else:
-                continue  # anonymous volume: container path only
-            if source and target:
-                yield source, target
-        elif isinstance(entry, dict):
-            if entry.get("type") not in (None, "bind"):
-                continue  # named volume, tmpfs, npipe — not a host path
-            source = entry.get("source") or entry.get("src")
-            target = entry.get("target") or entry.get("dst") or entry.get("destination")
-            if source and target:
-                yield str(source), str(target)
+def _env(service: dict) -> dict[str, str]:
+    raw = service.get("environment") or {}
+    if isinstance(raw, dict):
+        return {str(k): str(v) for k, v in raw.items()}
+    out: dict[str, str] = {}
+    for item in raw:
+        key, _, value = str(item).partition("=")
+        out[key] = value
+    return out
 
 
-def _is_bind_source(source: str) -> bool:
-    """True when the source is a host path rather than a named volume."""
-    return source.startswith(("./", "../", ".\\", "..\\", "/", "~", "\\")) or bool(
-        _WINDOWS_ABS.match(source)
-    )
+def test_embedded_base_and_production_brain_are_explicit():
+    base = _load(BASE_FILE)["services"]
+    prod = _load(PRODUCTION_FILE)["services"]
+
+    assert "embedded" in _env(base["app"])["RETRIEVAL_BACKEND"]
+    app_env = _env(prod["app"])
+    assert app_env["RETRIEVAL_BACKEND"] == "search-router"
+    assert app_env["RETRIEVAL_FALLBACK"] == ""
+    assert app_env["SEARCH_ROUTER_URL"] == "http://search-router:8888"
+    assert prod["app"]["depends_on"]["search-router"]["condition"] == "service_healthy"
 
 
-def _resolve(source: str) -> Path:
-    path = Path(source).expanduser()
-    return path if path.is_absolute() else REPO_ROOT / source
+def test_production_router_wires_real_dependencies():
+    services = _load(PRODUCTION_FILE)["services"]
+    router = services["search-router"]
+    assert router["profiles"] == ["production"]
+    assert router["build"]["context"] == "./services/search-router"
+
+    required = {"search-db", "redis", "opensearch", "qdrant", "searxng"}
+    assert required <= set(router["depends_on"])
+    for dependency in required:
+        assert router["depends_on"][dependency]["condition"] == "service_healthy"
+
+    env = _env(router)
+    assert env["HUB_DATABASE_URL"].startswith("postgresql://searchhub:")
+    assert env["REDIS_URL"].startswith("redis://redis:")
+    assert env["SEARXNG_URL"] == "http://searxng:8080"
+    assert env["OPENSEARCH_ENABLED"] == "true"
+    assert env["OPENSEARCH_HOST"] == "opensearch"
+    assert env["QDRANT_ENABLED"] == "true"
+    assert env["QDRANT_URL"] == "http://qdrant:6333"
 
 
-def test_default_profile_bind_mount_sources_exist():
-    missing = []
-    for name, svc in _load_services().items():
-        if svc.get("profiles"):
-            continue  # profile-gated: not started by `docker compose up -d`
-        for source, target in _iter_mounts(svc):
-            if not _is_bind_source(source):
-                continue  # named volume — not a repo path
-            if not _resolve(source).exists():
-                missing.append(f"  {name}: {source} -> {target}")
-    assert not missing, (
-        "default-profile services bind-mount sources missing from the checkout:\n"
-        + "\n".join(missing)
-    )
+def test_production_images_are_pinned_and_bind_mounts_exist():
+    services = _load(PRODUCTION_FILE)["services"]
+    for name in ("search-db", "redis", "opensearch", "qdrant", "searxng"):
+        image = services[name]["image"]
+        assert ":" in image and not image.endswith(":latest"), f"{name} image must be pinned"
+
+    for name, service in services.items():
+        for mount in service.get("volumes") or []:
+            if not isinstance(mount, str) or not mount.startswith("."):
+                continue
+            source = mount.split(":", 1)[0]
+            assert (REPO_ROOT / source).exists(), f"missing bind source: {name}: {source}"
 
 
-def test_firecrawl_postgres_has_no_initdb_bind_mount():
-    services = _load_services()
-    fc_postgres = services.get("firecrawl-postgres")
-    assert fc_postgres is not None, "firecrawl-postgres service missing from compose"
-    assert "volumes" not in fc_postgres, (
-        "firecrawl-postgres must not declare volumes — the removed postgres-init "
-        "bind mount pointed at a path the firecrawl submodule does not track"
-    )
-    offenders = []
-    for name, svc in services.items():
-        for source, target in _iter_mounts(svc):
-            norm_source = source.replace("\\", "/").removeprefix("./")
-            under_initdb = target == INITDB_DIR or target.startswith(INITDB_DIR + "/")
-            under_firecrawl = norm_source == "firecrawl" or norm_source.startswith("firecrawl/")
-            if under_initdb and under_firecrawl:
-                offenders.append(f"  {name}: {source} -> {target}")
-    assert not offenders, (
-        "no service may seed /docker-entrypoint-initdb.d/ from firecrawl/:\n" + "\n".join(offenders)
-    )
+def test_facade_database_and_brain_database_are_separate():
+    """Embedded tables must not collide with search-router PostGIS schemas."""
+    prod = _load(PRODUCTION_FILE)["services"]
+    app_dsn = _env(prod["app"])["DATABASE_URL"]
+    brain_dsn = _env(prod["search-router"])["HUB_DATABASE_URL"]
+    assert "@db:" in app_dsn and app_dsn.endswith("/app_db")
+    assert "@search-db:" in brain_dsn and brain_dsn.endswith("/searchhub")

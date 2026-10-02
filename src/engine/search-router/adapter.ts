@@ -6,9 +6,9 @@
 //
 //     POST {SEARCH_ROUTER_URL}/v1/retrieve        (Retrieval Contract v1 — docs/retrieve.contract.md)
 //
-// Baseline search-router hiện chưa có endpoint này (upstream/api/baseline.openapi.json). Khi gặp
-// 404/405 adapter báo lỗi 503 rõ ràng kèm hướng dẫn, không âm thầm chuyển engine.
-// Không giữ state trong process (không circuit breaker cục bộ): chỉ timeout; trạng thái dùng chung → Redis (phase H).
+// Snapshot production trong services/search-router đã mount endpoint này. 404/405 vẫn được xem là
+// deployment drift và adapter báo 503 rõ ràng, không âm thầm chuyển engine.
+// Không giữ state trong process (không circuit breaker cục bộ): chỉ timeout; trạng thái provider dùng chung ở core/Redis.
 // ---------------------------------------------------------------------------
 import { BackendUnavailableError, type BackendDescription, type RetrievalBackend } from "@/core/backend";
 import type { RetrieveRequest, RetrieveResult } from "@/core/contract";

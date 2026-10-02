@@ -5,9 +5,10 @@ import json
 from pathlib import Path
 
 import httpx
+from fastapi import FastAPI
+
 from api.retrieve import retrieval_service, router
 from core.unified_retrieve import UnifiedRetriever
-from fastapi import FastAPI
 from security.apikeys import require_api_key
 
 

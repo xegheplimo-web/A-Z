@@ -1,10 +1,11 @@
 """POST /v1/retrieve — one retrieval brain for UI, API and MCP facades."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from core.unified_retrieve import UnifiedRetriever
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
+
+from core.unified_retrieve import UnifiedRetriever
 from security.apikeys import require_api_key
 
 router = APIRouter(
@@ -40,6 +41,9 @@ def retrieval_service():
     return UnifiedRetriever()
 
 
+RetrievalService = Annotated[UnifiedRetriever, Depends(retrieval_service)]
+
+
 @router.post("/retrieve")
-async def retrieve(req: RetrieveRequest, service=Depends(retrieval_service)):
+async def retrieve(req: RetrieveRequest, service: RetrievalService):
     return await service.retrieve(req.model_dump())

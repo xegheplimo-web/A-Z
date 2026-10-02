@@ -6,7 +6,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "test:conformance": "tsx scripts/conformance.ts",
+    "test:conformance:production": "tsx scripts/production-conformance.ts",
+    "test:e2e:production": "node scripts/production-e2e.mjs",
+    "benchmark:production": "tsx scripts/production-benchmark.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

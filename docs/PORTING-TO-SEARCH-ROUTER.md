@@ -40,14 +40,16 @@ Dùng patch `services/search-router-port.patch` từ root checkout VietScope (co
 
 Hoặc build snapshot: `docker build -t vietscope-search-router:retrieve-v1 services/search-router`. Không cần dependency/framework mới; giữ pyproject/lock upstream.
 
-## Kiểm chứng tại sandbox
+## Production Retrieval Gate
 
 - ASGI route thật, request validation, exact/unverified/related, stop/widen/degrade/timeout.
-- Binding `ExistingCoreServices` dùng QueryUnderstanding, AdminGraph, normalizer/ranker thật; chỉ transport ngoài bị thay thế.
+- Binding `ExistingCoreServices` dùng QueryUnderstanding, AdminGraph, normalizer/ranker thật; chỉ transport ngoài bị thay thế trong unit tests.
 - `scripts/test-core-port.ts` giải mã JSON từ Python qua **chính `fromWire()` mà adapter TypeScript dùng**.
-- `scripts/local1-pilot.ts --gate`: năm query user, BEFORE/AFTER; dữ liệu tham chiếu, không đại diện cả nước.
+- `docker-compose.production.yml` dựng core cùng PostGIS, Redis, OpenSearch, Qdrant và SearXNG; facade bị khóa ở `RETRIEVAL_BACKEND=search-router`, không fallback.
+- `npm run test:conformance:production` và `npm run test:e2e:production` chạy trên endpoint Python thật; CI còn dừng SearXNG để kiểm degraded-provider behavior.
+- `npm run benchmark:production -- --gate` chạy năm query LOCAL-1 live, ghi report không phải fixture. Gate chất lượng chỉ có ý nghĩa khi deployment đã nạp dữ liệu thật và nhãn được review.
 
-Không tuyên bố stack production đã chạy: sandbox không có Docker/OS/Qdrant/SearXNG/registry thật. Cần chạy live conformance/latency trên hạ tầng đó trước public beta. Request `research` có budget riêng nhưng endpoint retrieve chưa chạy nghiên cứu LLM đa hop — không gọi research/answer để lén dùng LLM.
+Production retrieval path đã trở thành first-class CI gate, nhưng điều đó **không** đồng nghĩa dữ liệu toàn quốc hay CD public đã sẵn sàng. Request `research` có budget riêng nhưng endpoint retrieve chưa chạy nghiên cứu LLM đa hop — không gọi research/answer để lén dùng LLM.
 
 ## Không thay đồng loạt legacy APIs trong một lần
 

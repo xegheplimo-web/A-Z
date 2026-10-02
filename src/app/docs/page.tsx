@@ -285,12 +285,13 @@ print(resp.model_extra["vietscope"]["places"]["exact"])   # places có cấu tr�
             </p>
           </div>
         </div>
-        <CodeBlock lang="bash · kiểm tra kiến trúc">{`node scripts/check-boundaries.mjs      # facade không import engine, không đọc bảng của brain
-npx tsx scripts/conformance.ts          # contract · một-brain · parity VN_GOLDEN giữa hai backend
-npx tsx scripts/test-auth.ts            # key hash · rate limit/quota/usage · MCP stateless
-npx tsx scripts/bench-scale.ts          # 150k places + 60k docs: latency, index, chất lượng dưới nhiễu`}</CodeBlock>
+        <CodeBlock lang="bash · kiểm tra kiến trúc">{`npm run check:boundaries                 # facade không import engine, không đọc bảng của brain
+npm run test:conformance                 # reference contract + lỗi adapter
+npm run test:conformance:production      # Python core thật → TypeScript adapter; embedded không load
+npm run test:e2e:production              # retrieve/search/places/responses/stream/auth
+npm run benchmark:production -- --gate   # LOCAL-1 live, không fixture`}</CodeBlock>
         <p className="mt-3 text-[11.5px] leading-relaxed text-fog-2">
-          Hiện search-router chưa có <code>/v1/retrieve</code> — adapter trả 503 rõ ràng cho đến khi port xong (<code>docs/PORTING-TO-SEARCH-ROUTER.md</code>).
+          Search-router đã mount <code>POST /v1/retrieve</code>. Production Compose profile nối PostGIS, Redis, OpenSearch, Qdrant và SearXNG; CI kiểm tuyến facade → core thật.
           Admin tạo key: <code>POST /v1/admin/keys</code> với <code>VIETSCOPE_ADMIN_KEY</code>.
         </p>
       </section>

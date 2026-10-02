@@ -13,7 +13,7 @@ import hashlib
 import math
 import re
 import time
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 from core.entity_resolver import fold
@@ -93,8 +93,8 @@ class ExistingCoreServices:
             if row.get("specialties") or row.get("specialty_evidence"):
                 return row
             detail = await service.get_place(row["place_id"])
-            if getattr(detail, "payload", None):
-                payload = detail.payload
+            payload = cast(dict[str, Any] | None, getattr(detail, "payload", None))
+            if payload:
                 evidence = [
                     str(p.get("value", ""))
                     for p in payload.get("provenance", [])
@@ -119,16 +119,25 @@ class ExistingCoreServices:
 
     async def web(self, query: str, mode: str, limit: int):
         from api.v1 import _get_orchestrator
-
         from core.budget import SearchBudget
 
         orchestrator = _get_orchestrator()
+        before = {
+            name: health.last_failure
+            for name, health in orchestrator.monitor.snapshot_all().items()
+        }
         budget = SearchBudget.for_mode(mode)
         profile = orchestrator.query_understanding.analyze(query)
         sources = await orchestrator._search_query(
             query, budget, profile, mode, overrides={"max_results": min(50, limit * 3)}
         )
-        return [plain(s) for s in sources[:50]], False
+        after = orchestrator.monitor.snapshot_all()
+        degraded = any(
+            health.last_failure is not None
+            and health.last_failure != before.get(name)
+            for name, health in after.items()
+        ) or any(health.circuit.value != "closed" for health in after.values())
+        return [plain(s) for s in sources[:50]], degraded
 
     async def corpus(self, query: str, mode: str, limit: int):
         from api.v1 import _hybrid_retrieve
@@ -142,9 +151,8 @@ class ExistingCoreServices:
         self, query: str, lanes: list[list[dict]], mode: str, limit: int, read: bool
     ):
         from api.v1 import _get_orchestrator
-        from models import Source
-
         from core.budget import SearchBudget
+        from models import Source
 
         orchestrator = _get_orchestrator()
         # Preserve the core's URL identity + normalization. RRF is rank fusion only.
@@ -286,7 +294,7 @@ class UnifiedRetriever:
                 return rows
             except TimeoutError:
                 status = "timeout"
-            except Exception:
+            except Exception:  # noqa: BLE001 — provider failures are contract data
                 status = "error"
             stages.append(
                 {
@@ -319,9 +327,7 @@ class UnifiedRetriever:
                 seen.add(pid)
                 dist = distance_km(anchor, row) if anchor else None
                 in_scope = row.get("admin_unit_id") in unit_ids if unit_ids else False
-                if near and anchor:
-                    in_scope = dist is not None and dist <= 5
-                elif not unit_ids and anchor:
+                if near and anchor or not unit_ids and anchor:
                     in_scope = dist is not None and dist <= 5
                 elif not unit_ids and area_terms:
                     # Address evidence only; never use a province match to satisfy a commune query.
@@ -359,9 +365,9 @@ class UnifiedRetriever:
                     "tạp hóa": {"convenience", "grocery", "supermarket"},
                     "nhà thuốc": {"pharmacy"},
                 }
-                matched_specialty = (
-                    matched_specialty
-                    or category in allowed_category.get(specialty, set())
+                matched_specialty = matched_specialty or (
+                    specialty is not None
+                    and category in allowed_category.get(specialty, set())
                 )
                 verified = (
                     bool(row.get("last_verified_at"))
@@ -404,16 +410,22 @@ class UnifiedRetriever:
                     if matched_specialty
                     else related
                 ).append(p)
-        lane_docs = []
+        lane_docs: list[list[dict[str, Any]]] = []
         if not local or len(exact) < min(2, limit):
             if local:
                 widening.append(
                     "Canonical chưa đủ bằng chứng → web + own index; kết quả web không tự trở thành địa điểm exact."
                 )
-            lane_docs = await asyncio.gather(
-                lane("live-web", lambda: self.services.web(query, core_mode, limit)),
-                lane(
-                    "own-index", lambda: self.services.corpus(query, core_mode, limit)
+            lane_docs = cast(
+                list[list[dict[str, Any]]],
+                list(
+                    await asyncio.gather(
+                        lane("live-web", lambda: self.services.web(query, core_mode, limit)),
+                        lane(
+                            "own-index",
+                            lambda: self.services.corpus(query, core_mode, limit),
+                        ),
+                    )
                 ),
             )
         elif local:
@@ -442,7 +454,7 @@ class UnifiedRetriever:
                         ),
                         remaining,
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001 — bounded reader degrades to no docs
                     stages.append(
                         {
                             "provider": "reader-rerank",

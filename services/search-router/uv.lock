@@ -1927,16 +1927,18 @@ dependencies = [
     { name = "prometheus-client" },
     { name = "pydantic" },
     { name = "redis" },
-    { name = "sentence-transformers" },
-    { name = "torch" },
     { name = "trafilatura" },
-    { name = "transformers" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.optional-dependencies]
 mcp = [
     { name = "mcp" },
+]
+ml = [
+    { name = "sentence-transformers" },
+    { name = "torch" },
+    { name = "transformers" },
 ]
 osmium = [
     { name = "osmium" },
@@ -1970,13 +1972,13 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.21.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "redis", specifier = ">=5.0" },
-    { name = "sentence-transformers", specifier = ">=2.7.0" },
-    { name = "torch", specifier = ">=2.1.0" },
+    { name = "sentence-transformers", marker = "extra == 'ml'", specifier = ">=2.7.0" },
+    { name = "torch", marker = "extra == 'ml'", specifier = ">=2.1.0" },
     { name = "trafilatura", specifier = ">=2.0" },
-    { name = "transformers", specifier = ">=4.40.0" },
+    { name = "transformers", marker = "extra == 'ml'", specifier = ">=4.40.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
-provides-extras = ["mcp", "osmium"]
+provides-extras = ["ml", "mcp", "osmium"]
 
 [package.metadata.requires-dev]
 dev = [

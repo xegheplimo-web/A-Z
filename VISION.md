@@ -49,15 +49,18 @@ Mọi feature chỉ được thêm nếu giúp ít nhất một trong bốn th�
 - Hai engine **không** chạy song song: chỉ backend được chọn mới được nạp (đã có test chứng minh).
 - Ranh giới được **máy kiểm tra**: `node scripts/check-boundaries.mjs` (facade không import engine, không đọc bảng của brain).
 - `/v1/search`, `/v1/places/search`, `/v1/evidence`, MCP `vietscope_retrieve` đều chỉ là facade của `retrieve()`; `/v1/answer`, chat, responses = `retrieve()` → synthesize → verify.
-- Brain production = `search-router`; nó **chưa có** `/v1/retrieve` — xem `docs/PORTING-TO-SEARCH-ROUTER.md`.
-- Đóng băng feature mới cho đến khi đạt các gate chất lượng; việc tiếp theo là execution + benchmark + data acquisition.
+- Brain production = `search-router`; `POST /v1/retrieve` đã được mount trong snapshot và production Compose profile. CI chạy contract/core tests và E2E facade → Python core thật.
+- Đóng băng feature mới cho đến khi đạt các gate chất lượng; việc tiếp theo sau P-NEXT là live benchmark có nhãn và data acquisition.
 
 ## Kiểm thử (đều chạy được không cần GPU/API key)
 
 | lệnh | kiểm tra |
 |---|---|
 | `node scripts/check-boundaries.mjs` | ranh giới facade ↔ brain |
-| `npx tsx scripts/conformance.ts` | contract · một-brain · **parity** VN_GOLDEN giữa hai backend · lỗi adapter |
+| `npm run test:conformance` | contract · một-brain · parity reference backend · lỗi adapter |
+| `npm run test:conformance:production` | Python `/v1/retrieve` thật → wire validator → TypeScript adapter; embedded không được load |
+| `npm run test:e2e:production` | facade retrieve/search/places/responses/stream/auth qua production brain |
+| `npm run benchmark:production -- --gate` | LOCAL-1 live, không fixture; precision/noise/outside-area/P95/contract gates |
 | `npx tsx scripts/smoke-upstreams.ts` | LLM gateway (retry/timeout/breaker/stream/usage thật) + lane web của engine embedded |
 | `npx tsx scripts/test-auth.ts` | API key hash · rate limit/quota/usage ở Postgres · MCP session stateless |
 | `npx tsx scripts/bench-scale.ts` | engine tham chiếu ở 150k places + 60k docs: latency, index, chất lượng dưới nhiễu |
@@ -114,7 +117,8 @@ P9  Vietnam corpus expansion
 P10 Answer Engine refinement                       ✅ khung: InferenceGateway (roles, retry/timeout theo budget, breaker, stream thật) — còn: prompt tuning trên LLM thật
 P11 OpenAI-compatible API                          ✅ (/v1/responses + /v1/chat/completions + stream)
 P12 Billing/API keys/quotas                        (khung: VIETSCOPE_API_KEYS + rate limit ✅)
-P13 Production/CD/scale
+P13 Production/CD/scale                         ◐ production retrieval gate trong CI; deploy secrets/post-deploy còn thiếu
+P-NEXT Production Retrieval Gate                ✅ Compose + Python CI + conformance + production E2E
 ```
 
 Kiến trúc production đầy đủ (SearXNG, Firecrawl, OpenSearch, Qdrant, reranker, hub-postgres,
@@ -132,8 +136,9 @@ Không mở vertical/framework/model mới. Ba việc của đợt này:
 
 ### Gate và giới hạn
 
-- ASGI/main mount và binding core đã kiểm thử bằng I/O fixture; legacy LOCAL-1 tests không bị phá.
-- Facade một brain/parity kiểm chứng qua `scripts/conformance.ts`; dữ liệu fixture không thay số đo production.
+- ASGI/main mount và binding core được kiểm bằng full Python core CI; legacy LOCAL-1 tests không bị phá.
+- Production profile dựng search-router cùng PostGIS/Redis/OpenSearch/Qdrant/SearXNG; E2E gọi facade → core thật và kiểm provider degradation. Reference conformance vẫn được giữ riêng.
+- `scripts/production-benchmark.ts` ghi report live (`fixture_only=false`); smoke latency chạy CI, quality gate đầy đủ chỉ đạt khi có dữ liệu/nhãn live phù hợp.
 - `H3 = null` khi chưa xác định; chưa tuyên bố đã import PBF/registry Việt Nam hay có crawler tự động.
 - Ops pilot chỉ có ở backend embedded hiện tại; backend search-router không hỗ trợ phải báo rõ, không âm thầm chuyển brain.
 - Không còn promote public `verified:true`. Canonical writes cần quan sát có nguồn và quyền quản trị.

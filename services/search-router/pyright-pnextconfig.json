@@ -1,0 +1,14 @@
+{
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12",
+  "include": [
+    "api/retrieve.py",
+    "core/unified_retrieve.py"
+  ],
+  "exclude": [
+    ".venv",
+    "tests",
+    "eval"
+  ],
+  "reportMissingImports": true
+}

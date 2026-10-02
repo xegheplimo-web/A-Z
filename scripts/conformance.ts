@@ -122,7 +122,7 @@ async function main() {
       ok(label, e instanceof BackendUnavailableError && re.test(e.message), e instanceof Error ? e.message.slice(0, 110) : String(e));
     }
   };
-  mode = "404"; await expectUnavailable("D1 404 → báo rõ search-router chưa có /v1/retrieve + trỏ tới tài liệu port", /chưa hỗ trợ POST \/v1\/retrieve.*PORTING/);
+  mode = "404"; await expectUnavailable("D1 404 → báo deployment drift /v1/retrieve + trỏ tới tài liệu port", /chưa hỗ trợ POST \/v1\/retrieve.*PORTING/);
   mode = "401"; await expectUnavailable("D2 401 → báo từ chối API key", /từ chối API key/);
   mode = "500"; await expectUnavailable("D3 500 → backend_unavailable", /lỗi HTTP 500/);
   mode = "garbage"; await expectUnavailable("D4 JSON hỏng → backend_unavailable", /không phải JSON/);
