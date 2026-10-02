@@ -37,7 +37,7 @@ export function PilotWorkspace({ baseline, current }: { baseline: Report; curren
       setError(e instanceof Error ? e.message : "Kết nối thất bại.");
     }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { void Promise.resolve().then(load); }, [load]);
 
   async function unlock() {
     setBusy(true); setError("");
