@@ -435,15 +435,17 @@ class PgCanonicalStore:
             args.append(src.domain)
             domain_i = len(args)
             clauses.append(f"website_domain = ${domain_i}")
-        if src.admin_unit_id and src.tokens:
+        kept_tokens = [t for t in src.tokens if len(t) >= 3]
+        if src.admin_unit_id and kept_tokens:
             args.append(src.admin_unit_id)
             unit = f"admin_unit_id = ${len(args)}"
+            # index into the KEPT list — a filtered-out short token must
+            # not leave a placeholder gap that collides with later args
             like = " OR ".join(
                 f"normalized_name LIKE '%' || ${len(args) + i + 1} || '%'"
-                for i, t in enumerate(src.tokens)
-                if len(t) >= 3
+                for i in range(len(kept_tokens))
             )
-            args.extend(t for t in src.tokens if len(t) >= 3)
+            args.extend(kept_tokens)
             if like:
                 clauses.append(f"({unit} AND ({like}))")
         if src.lat is not None and src.lon is not None:

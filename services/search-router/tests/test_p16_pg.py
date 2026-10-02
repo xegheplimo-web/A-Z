@@ -224,6 +224,41 @@ class TestPgStore:
         assert "<->" in sql and "NULLS LAST" in sql
         assert rows[0].domain == "pho-thin.vn"
 
+    def test_candidates_tokens_under_3_chars_dont_shift_placeholders(self):
+        """Regression (found by first live OSM ingest): a token shorter
+        than 3 chars is filtered from the LIKE args, and its enumerate
+        index used to leave a placeholder gap — the geo radius param
+        then collided with a LIKE $n and Postgres resolved it as text:
+        st_dwithin(geography, geography, text) does not exist."""
+        pool = _FakePool(place_rows=[_place_row()])
+        store = PgCanonicalStore(pool)
+        src = _src(
+            phone=None,
+            domain=None,
+            tokens=frozenset({"my", "co", "te", "phan", "quoc", "viet"}),
+        )
+        asyncio.run(store.candidates(src))
+        sql, args = pool.calls[0][1], pool.calls[0][2]
+        # every referenced $n must map to the args position that holds it
+        import re
+
+        for m in re.finditer(r"\$(\d+)", sql):
+            n = int(m.group(1))
+            assert 1 <= n <= len(args), f"${n} out of range for {len(args)} args"
+        like_params = [
+            int(m.group(1))
+            for m in re.finditer(r"normalized_name LIKE '%' \|\| \$(\d+)", sql)
+        ]
+        radius_params = [
+            int(m.group(1))
+            for m in re.finditer(r"geography, \$(\d+)\)", sql)
+        ]
+        # LIKE placeholders point at token args; the radius points at 500.0
+        assert sorted(args[p - 1] for p in like_params) == sorted(
+            t for t in src.tokens if len(t) >= 3
+        )
+        assert all(args[p - 1] == 500.0 for p in radius_params)
+
     def test_candidates_empty_when_no_keys(self):
         pool = _FakePool()
         store = PgCanonicalStore(pool)
