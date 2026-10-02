@@ -47,6 +47,20 @@ jobs:
     needs: [lint, typecheck, build]
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_db
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,6 +68,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Setup database
+        run: |
+          npx drizzle-kit push
+          npx tsx src/db/seed.ts
       - name: Boundary check
         run: node scripts/check-boundaries.mjs
       - name: Conformance test
@@ -68,6 +86,20 @@ jobs:
     needs: [test]
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_db
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -79,28 +111,29 @@ jobs:
       - name: Start app (embedded backend)
         run: |
           cp .env.example .env
-          npx tsx src/db/seed.ts || true
+          npx drizzle-kit push
+          npx tsx src/db/seed.ts
           npm start &
           sleep 8
       - name: E2E smoke tests
         run: |
           # Health check
           curl -sf http://localhost:3000/api/health || exit 1
-          
+
           # Models endpoint
           curl -sf http://localhost:3000/v1/models | grep -q "vietscope-1" || exit 1
-          
+
           # Search endpoint (embedded)
           curl -sf -X POST http://localhost:3000/v1/search \
             -H 'content-type: application/json' \
             -d '{"query":"quán giò chả ngon ở Yên Dũng"}' | grep -q "results" || exit 1
-          
+
           # Places search
           curl -sf "http://localhost:3000/v1/places/search?query=Yên Dũng" | grep -q "places" || exit 1
-          
+
           # Providers
           curl -sf http://localhost:3000/v1/providers | grep -q "providers" || exit 1
-          
+
           echo "✅ All E2E tests passed"
       - name: Cleanup
         if: always()
