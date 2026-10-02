@@ -113,26 +113,30 @@ jobs:
           cp .env.example .env
           npx drizzle-kit push
           npx tsx src/db/seed.ts
-          npm start &
-          sleep 8
+          npm start > /tmp/app.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/health >/dev/null && exit 0
+            sleep 1
+          done
+          echo "app did not become healthy"; tail -n 80 /tmp/app.log; exit 1
       - name: E2E smoke tests
         run: |
-          # Health check
-          curl -sf http://localhost:3000/api/health || exit 1
+          trap 'echo "== app.log tail =="; tail -n 80 /tmp/app.log || true' ERR
+          set -e
+          check() { # $1=name $2=expected-substring $3..=curl args
+            name="$1"; want="$2"; shift 2
+            out=$(curl -sf "$@") || { echo "[$name] curl failed"; return 1; }
+            echo "[$name] $(echo "$out" | head -c 200)"
+            echo "$out" | grep -q "$want" || { echo "[$name] missing '$want'"; return 1; }
+          }
 
-          # Models endpoint
-          curl -sf http://localhost:3000/v1/models | grep -q "vietscope-1" || exit 1
-
-          # Search endpoint (embedded)
-          curl -sf -X POST http://localhost:3000/v1/search \
+          check health "ok" http://localhost:3000/api/health
+          check models "vietscope-1" http://localhost:3000/v1/models
+          check search '"results"' -X POST http://localhost:3000/v1/search \
             -H 'content-type: application/json' \
-            -d '{"query":"quán giò chả ngon ở Yên Dũng"}' | grep -q "results" || exit 1
-
-          # Places search
-          curl -sf "http://localhost:3000/v1/places/search?q=Yên%20Dũng" | grep -q "places" || exit 1
-
-          # Providers
-          curl -sf http://localhost:3000/v1/providers | grep -q "providers" || exit 1
+            -d '{"query":"quán giò chả ngon ở Yên Dũng"}'
+          check places '"places"' "http://localhost:3000/v1/places/search?q=Yên%20Dũng"
+          check providers '"providers"' http://localhost:3000/v1/providers
 
           echo "✅ All E2E tests passed"
       - name: Cleanup
