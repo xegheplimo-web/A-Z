@@ -15,7 +15,7 @@ export const PRODUCT = {
     "VietScope giúp bạn tìm kiếm thông tin về Việt Nam từ nhiều nguồn, hiểu tiếng Việt và ngữ cảnh Việt Nam sâu hơn, rồi trả lời kèm dẫn nguồn rõ ràng.",
   developerDescription:
     "Một Search & Answer Engine ưu tiên Việt Nam, sẵn sàng dùng qua web, API và AI agents.",
-  github: "https://github.com/xegheplimo-web/VietScope",
+  github: "https://github.com/xegheplimo-web/A-Z",
 } as const;
 
 export const PROMPT_CHIPS = [

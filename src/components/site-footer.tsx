@@ -21,7 +21,7 @@ export function SiteFooter() {
             </nav>
             <nav aria-label="Về VietScope" className="flex flex-col gap-3">
               <span className="mb-1 text-[10px] uppercase tracking-[0.13em] text-fog-2">Về VietScope</span>
-              <Link href="/#vi-sao-vietscope" className="w-fit rounded-sm text-fog hover:text-paper">Cách VietScope hoạt động</Link>
+              <Link href="/docs" className="w-fit rounded-sm text-fog hover:text-paper">Cách VietScope hoạt động</Link>
               <Link href="/docs#chat-luong" className="w-fit rounded-sm text-fog hover:text-paper">Đo lường chất lượng</Link>
               <a href={PRODUCT.github} target="_blank" rel="noopener noreferrer" className="flex w-fit items-center gap-1 rounded-sm text-fog hover:text-paper">GitHub<ArrowUpRight className="size-3" aria-hidden="true" /></a>
             </nav>

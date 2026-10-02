@@ -83,7 +83,7 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
   return (
     <div className="space-y-6">
       {/* Chỉ hiện ngữ cảnh có ích cho người tìm kiếm; chẩn đoán nằm trong Chi tiết tìm kiếm. */}
-      <div className="rise flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-fog-2">
+      <div className="rise flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-fog-2">
         <span className="flex items-center gap-1.5 font-medium text-gold"><Sparkles className="size-3.5" />{intentNames[und.intent] ?? "Tìm kiếm tổng hợp"}</span>
         {und.specialty && <span className="flex items-center gap-1.5"><ShoppingBag className="size-3" />{und.specialty}</span>}
         {und.locations.slice(0, 2).map((l) => <span key={l.id} className="flex items-center gap-1.5"><MapPin className="size-3" />{l.name}{l.status !== "current" && <span className="text-[9px] text-fog-2/80">· tên cũ</span>}</span>)}
@@ -93,17 +93,17 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         {/* ============ MAIN COLUMN ============ */}
         <div className="min-w-0 space-y-6">
-          {/* ---------- Answer card ---------- */}
-          <section className="rise rise-1 overflow-hidden rounded-2xl border border-line bg-ink-2/60">
-            <div className="border-b border-line/75 px-5 pb-5 pt-6 sm:px-7">
-              <div className="mb-3 flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-fog-2"><span>Câu trả lời từ VietScope</span><span className="font-mono text-jade/80 normal-case tracking-normal">vietscope-1</span></div>
+          {/* ---------- Answer: open canvas — nội dung quan trọng hơn container ---------- */}
+          <section className="rise rise-1">
+            <div className="border-b border-line/60 pb-5">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.14em] text-fog-2">Câu trả lời</p>
               <h1 className="text-[21px] font-semibold leading-[1.5] tracking-[-0.03em] text-paper sm:text-[25px]">{answer.headline}</h1>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10.5px] text-fog-2">
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-fog-2">
                 {sources.length ? <a href="#sources" className="flex items-center gap-1.5 rounded-sm hover:text-paper"><FileText className="size-3.5" />{sources.length} nguồn tham khảo</a> : <span>Chưa có đủ nguồn phù hợp</span>}
                 {answer.claimsUnsupported > 0 && <span className="flex items-center gap-1.5 text-gold/90"><ShieldAlert className="size-3" />{answer.claimsUnsupported} nội dung cần kiểm chứng thêm</span>}
               </div>
             </div>
-            <div className="space-y-5 px-5 py-6 sm:px-7">
+            <div className="space-y-5 py-6">
               {answer.blocks.map((b, i) => {
                 if (b.kind === "table" && b.table) {
                   return (
@@ -168,7 +168,7 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                 return (
                   <div key={i} className={b.supported === false ? "border-l-2 border-gold/50 pl-4" : undefined}>
                     {b.supported === false && <span className="mb-2 block text-[10px] font-medium text-gold">Chưa đủ bằng chứng — cần đối chiếu nguồn</span>}
-                    <p className="text-[14px] leading-[1.95] text-fog sm:text-[14.5px]">{b.text}{(b.citations ?? []).map((n) => <Cite key={n} n={n} />)}</p>
+                    <p className="text-[15px] leading-[1.9] text-fog">{b.text}{(b.citations ?? []).map((n) => <Cite key={n} n={n} />)}</p>
                   </div>
                 );
               })}
@@ -320,7 +320,7 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                           <span className="line-clamp-2 text-[12px] font-medium leading-relaxed text-paper group-hover:text-gold">
                             {s.title}
                           </span>
-                          <span className="mt-0.5 flex items-center gap-1.5 text-[10.5px] text-fog-2">
+                          <span className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-fog-2">
                             <Icon className="size-2.5" />
                             {s.domain} · {s.freshness}
                           </span>

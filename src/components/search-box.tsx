@@ -5,7 +5,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useTransi
 import { ArrowUp, Loader2, Search, X } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 import clsx from "clsx";
-import { PRODUCT, SEARCH_PLACEHOLDERS } from "@/lib/product-copy";
+import { SEARCH_PLACEHOLDERS } from "@/lib/product-copy";
 
 export interface SearchBoxHandle {
   fill: (query: string) => void;
@@ -98,9 +98,7 @@ export const SearchBox = forwardRef<SearchBoxHandle, SearchBoxProps>(function Se
           className={clsx("min-w-0 flex-1 bg-transparent py-4 text-[16px] text-paper outline-none placeholder:text-fog-2/85", big && "sm:text-[17px]")}
         />
         {value && <button type="button" aria-label="Xóa câu hỏi" onClick={() => { setValue(""); inputRef.current?.focus(); }} className="flex size-8 shrink-0 items-center justify-center rounded-full text-fog-2 hover:bg-ink-3 hover:text-paper"><X className="size-3.5" /></button>}
-        <span className="hidden shrink-0 items-center gap-1.5 rounded-md bg-white/[0.025] px-2 py-1.5 font-mono text-[10px] tracking-tight text-fog-2 sm:flex">
-          <span className="size-1 rounded-full bg-jade" aria-hidden="true" />{PRODUCT.model}
-        </span>
+
         <button type="submit" aria-label="Tìm kiếm" disabled={pending || !value.trim()} aria-busy={pending} className={clsx(
           "flex shrink-0 items-center justify-center rounded-[14px] bg-gold text-[#241c0c] transition-colors hover:bg-[#ffd078] disabled:cursor-default disabled:bg-gold/70 disabled:text-[#241c0c]/80",
           big ? "size-[46px]" : "size-[42px]"
