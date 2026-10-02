@@ -135,7 +135,7 @@ jobs:
           check search '"results"' -X POST http://localhost:3000/v1/search \
             -H 'content-type: application/json' \
             -d '{"query":"quán giò chả ngon ở Yên Dũng"}'
-          check places '"places"' "http://localhost:3000/v1/places/search?q=Yên%20Dũng"
+          check places '"places"' "http://localhost:3000/v1/places/search?q=Y%C3%AAn%20D%C5%A9ng"
           check providers '"providers"' http://localhost:3000/v1/providers
 
           echo "✅ All E2E tests passed"
