@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Boundary check
+        run: node scripts/check-boundaries.mjs
+      - name: Conformance test
+        run: npx tsx scripts/conformance.ts
+      - name: Smoke upstreams
+        run: npx tsx scripts/smoke-upstreams.ts
+      - name: Auth test
+        run: npx tsx scripts/test-auth.ts
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start app (embedded backend)
+        run: |
+          cp .env.example .env
+          npx tsx src/db/seed.ts || true
+          npm start &
+          sleep 8
+      - name: E2E smoke tests
+        run: |
+          # Health check
+          curl -sf http://localhost:3000/api/health || exit 1
+          
+          # Models endpoint
+          curl -sf http://localhost:3000/v1/models | grep -q "vietscope-1" || exit 1
+          
+          # Search endpoint (embedded)
+          curl -sf -X POST http://localhost:3000/v1/search \
+            -H 'content-type: application/json' \
+            -d '{"query":"quán giò chả ngon ở Yên Dũng"}' | grep -q "results" || exit 1
+          
+          # Places search
+          curl -sf "http://localhost:3000/v1/places/search?query=Yên Dũng" | grep -q "places" || exit 1
+          
+          # Providers
+          curl -sf http://localhost:3000/v1/providers | grep -q "providers" || exit 1
+          
+          echo "✅ All E2E tests passed"
+      - name: Cleanup
+        if: always()
+        run: pkill -f "next start" || true

@@ -1,0 +1,540 @@
+{
+  "created_at": "2026-10-02T05:22:38.264Z",
+  "backend": "embedded",
+  "fixture_only": true,
+  "notes": "5 query do người dùng cung cấp; Tân An chưa có cơ sở sắt được xác minh trong fixture. Số liệu không đại diện dữ liệu/live latency toàn quốc.",
+  "queries": [
+    {
+      "query": "quán giò chả Yên Dũng",
+      "specialty": "giò chả",
+      "categories": [
+        "gio-cha"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung",
+          "x_tan_an",
+          "x_tien_phong",
+          "x_canh_thuy"
+        ]
+      },
+      "anchor": {
+        "lat": 21.1861,
+        "lng": 106.0763,
+        "label": "Bắc Ninh"
+      },
+      "exact": [
+        {
+          "id": "56477141-0715-439d-ba5e-e7d4cfa02000",
+          "name": "Giò chả Tư Nhuận Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 20.39713036030439
+        },
+        {
+          "id": "0df537ec-97a0-4700-bc05-041dc6caddcb",
+          "name": "Giò chả Bích Hạnh Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 20.12095488864115
+        }
+      ],
+      "unverified": [
+        "Giò chả Mến Diên - Quán ăn sáng",
+        "Giò chả Nội Hoàng - Chi nhánh Bắc Giang"
+      ],
+      "related": [
+        "Quán nhậu Bảy Bự",
+        "Trà chanh Nội Hoàng - Chém gió",
+        "Bún chả Mẹt Yên Dũng",
+        "Bánh cuốn nóng Bà Đức",
+        "Cháo vịt 24h ngã tư Cầu Đò",
+        "Phở Gánh Neo",
+        "Cà phê Sân Vườn Vũ",
+        "Cơm rang Thịnh Neo"
+      ],
+      "p95_ms": 12,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "quán cafe Yên Dũng Neo",
+      "specialty": "cà phê",
+      "categories": [
+        "cafe"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung",
+          "x_tan_an",
+          "x_tien_phong",
+          "x_canh_thuy"
+        ]
+      },
+      "anchor": {
+        "lat": 21.215,
+        "lng": 106.215,
+        "label": "Xã Yên Dũng"
+      },
+      "exact": [
+        {
+          "id": "3f080d0e-e8da-46a7-be98-2f6b0e3ca90c",
+          "name": "Cà phê Sân Vườn Vũ",
+          "category": "cafe",
+          "address": "Thôn Bồng Lai, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 3.189928985274112
+        },
+        {
+          "id": "85830a57-8285-41d7-987f-34baabd78754",
+          "name": "Cộng Cà Phê Bắc Giang",
+          "category": "cafe",
+          "address": "Số 12 Ngô Gia Tự, phường Bắc Giang, Bắc Ninh",
+          "distance_km": 7.089972099145867
+        },
+        {
+          "id": "f567d83e-7a94-499e-b836-617f8f6d3a4b",
+          "name": "Trà chanh Nội Hoàng - Chém gió",
+          "category": "cafe",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 6.2139722850976655
+        },
+        {
+          "id": "3102cdcf-1251-48fd-9e59-401fa2005469",
+          "name": "Căn tin & Cafe Thủy Tạ Kinh Bắc",
+          "category": "cafe",
+          "address": "Phường Vũ Ninh, Bắc Ninh",
+          "distance_km": 14.768588341412768
+        }
+      ],
+      "unverified": [
+        "Cà phê Ama Neo"
+      ],
+      "related": [
+        "Quán nhậu Bảy Bự",
+        "Giò chả Mến Diên - Quán ăn sáng",
+        "Bánh cuốn nóng Bà Đức",
+        "Phở Gánh Neo",
+        "Giò chả Tư Nhuận Nội Hoàng",
+        "Giò chả Bích Hạnh Nội Hoàng",
+        "Cơm rang Thịnh Neo",
+        "Cháo vịt 24h ngã tư Cầu Đò"
+      ],
+      "p95_ms": 8,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": false,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "cửa hàng sắt Tân An",
+      "specialty": null,
+      "categories": [],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_tan_an"
+        ]
+      },
+      "anchor": {
+        "lat": 21.26,
+        "lng": 106.2,
+        "label": "Xã Tân An"
+      },
+      "exact": [
+        {
+          "id": "c756bfd6-ead9-4006-ad88-db3edf5fc0cb",
+          "name": "Cửa hàng xăng dầu Neo",
+          "category": "xang-dau",
+          "address": "QL37, TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.42161051763522
+        },
+        {
+          "id": "e3cbff44-c61e-4adb-9ca6-982ef9cbf08d",
+          "name": "Vật liệu xây dựng Cường Thịnh",
+          "category": "vlxd",
+          "address": "QL37, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.024527115749863
+        },
+        {
+          "id": "85830a57-8285-41d7-987f-34baabd78754",
+          "name": "Cộng Cà Phê Bắc Giang",
+          "category": "cafe",
+          "address": "Số 12 Ngô Gia Tự, phường Bắc Giang, Bắc Ninh",
+          "distance_km": 1.8542526034060307
+        },
+        {
+          "id": "923b020a-6a8d-4248-8c61-9a7966b4b9d7",
+          "name": "Nhà thuốc An Sinh",
+          "category": "nha-thuoc",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.27871248114424
+        },
+        {
+          "id": "56477141-0715-439d-ba5e-e7d4cfa02000",
+          "name": "Giò chả Tư Nhuận Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 6.608318315331324
+        },
+        {
+          "id": "0df537ec-97a0-4700-bc05-041dc6caddcb",
+          "name": "Giò chả Bích Hạnh Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 6.414886330521964
+        },
+        {
+          "id": "3f080d0e-e8da-46a7-be98-2f6b0e3ca90c",
+          "name": "Cà phê Sân Vườn Vũ",
+          "category": "cafe",
+          "address": "Thôn Bồng Lai, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.396621734968736
+        },
+        {
+          "id": "099c5749-be26-46f1-a604-303b169c08ad",
+          "name": "Điện nước & Dụng cụ Minh Tâm",
+          "category": "dung-cu-dien",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.204788269110409
+        },
+        {
+          "id": "3bb9251b-68e3-4135-ac68-35360c276512",
+          "name": "Bánh cuốn nóng Bà Đức",
+          "category": "banh-cuon",
+          "address": "Chợ Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.211421742767513
+        },
+        {
+          "id": "78baba7b-c68d-49eb-bbde-b562b87ece3a",
+          "name": "Phở Gánh Neo",
+          "category": "pho",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.23705940381605
+        },
+        {
+          "id": "66621041-b7aa-4751-953c-faf314a9888b",
+          "name": "Sửa xe máy Đức Hạnh",
+          "category": "sua-xe",
+          "address": "QL37, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.032635174658799
+        },
+        {
+          "id": "f567d83e-7a94-499e-b836-617f8f6d3a4b",
+          "name": "Trà chanh Nội Hoàng - Chém gió",
+          "category": "cafe",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 6.783446508463656
+        },
+        {
+          "id": "91c930b8-6b48-4060-902e-ae2ff4b3b913",
+          "name": "NetCore Gaming Neo",
+          "category": "net",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.074710148804265
+        },
+        {
+          "id": "d1136979-d616-45f8-90d8-10c4df3b9129",
+          "name": "Cơm rang Thịnh Neo",
+          "category": "com",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.224600242003075
+        },
+        {
+          "id": "610fceec-cf9a-4429-91f3-ce8ee7d76bbc",
+          "name": "Quán nhậu Bảy Bự",
+          "category": "an-dem",
+          "address": "Xã Cảnh Thụy, Bắc Ninh",
+          "distance_km": 10.001575054987995
+        },
+        {
+          "id": "571b9abb-0f72-4dbb-abbb-766b13468227",
+          "name": "Nhà nghỉ Thanh Xuân",
+          "category": "nha-nghi",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.42095246427472
+        },
+        {
+          "id": "26fe7e54-0fab-4658-8e88-b3e442bbc589",
+          "name": "Tạp hóa Hồng Vân",
+          "category": "tap-hoa",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 6.52791809133791
+        },
+        {
+          "id": "9a90d052-e2c2-4300-b799-efaea1256ce4",
+          "name": "Phở Gân Bắc Ninh",
+          "category": "pho",
+          "address": "Phường Vũ Ninh, Bắc Ninh",
+          "distance_km": 14.96692618197295
+        },
+        {
+          "id": "3102cdcf-1251-48fd-9e59-401fa2005469",
+          "name": "Căn tin & Cafe Thủy Tạ Kinh Bắc",
+          "category": "cafe",
+          "address": "Phường Vũ Ninh, Bắc Ninh",
+          "distance_km": 15.282662097618825
+        },
+        {
+          "id": "f937aa58-4971-4fc8-84c2-c6de8567fa3e",
+          "name": "Bánh phu thê Xuân Hạ Đình Bảng",
+          "category": "dac-san",
+          "address": "Làng Đình Bảng, phường Đình Bảng, Bắc Ninh",
+          "distance_km": 30.722932073491645
+        }
+      ],
+      "unverified": [
+        "Bún chả Mẹt Yên Dũng",
+        "Giò chả Nội Hoàng - Chi nhánh Bắc Giang",
+        "Giò chả Mến Diên - Quán ăn sáng",
+        "Cà phê Ama Neo"
+      ],
+      "related": [],
+      "p95_ms": 10,
+      "checks": {
+        "intent": true,
+        "specialty": false,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": false
+      }
+    },
+    {
+      "query": "cửa hàng bách hóa Yên Dũng",
+      "specialty": null,
+      "categories": [],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung",
+          "x_tan_an",
+          "x_tien_phong",
+          "x_canh_thuy"
+        ]
+      },
+      "anchor": {
+        "lat": 21.1861,
+        "lng": 106.0763,
+        "label": "Bắc Ninh"
+      },
+      "exact": [
+        {
+          "id": "56477141-0715-439d-ba5e-e7d4cfa02000",
+          "name": "Giò chả Tư Nhuận Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 20.39713036030439
+        },
+        {
+          "id": "0df537ec-97a0-4700-bc05-041dc6caddcb",
+          "name": "Giò chả Bích Hạnh Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 20.12095488864115
+        },
+        {
+          "id": "26fe7e54-0fab-4658-8e88-b3e442bbc589",
+          "name": "Tạp hóa Hồng Vân",
+          "category": "tap-hoa",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 20.294422758504282
+        },
+        {
+          "id": "099c5749-be26-46f1-a604-303b169c08ad",
+          "name": "Điện nước & Dụng cụ Minh Tâm",
+          "category": "dung-cu-dien",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.730834676306882
+        },
+        {
+          "id": "c756bfd6-ead9-4006-ad88-db3edf5fc0cb",
+          "name": "Cửa hàng xăng dầu Neo",
+          "category": "xang-dau",
+          "address": "QL37, TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 15.106656834176809
+        },
+        {
+          "id": "f567d83e-7a94-499e-b836-617f8f6d3a4b",
+          "name": "Trà chanh Nội Hoàng - Chém gió",
+          "category": "cafe",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 20.60868560184603
+        },
+        {
+          "id": "e3cbff44-c61e-4adb-9ca6-982ef9cbf08d",
+          "name": "Vật liệu xây dựng Cường Thịnh",
+          "category": "vlxd",
+          "address": "QL37, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 15.503948507746566
+        },
+        {
+          "id": "923b020a-6a8d-4248-8c61-9a7966b4b9d7",
+          "name": "Nhà thuốc An Sinh",
+          "category": "nha-thuoc",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.82231776614554
+        },
+        {
+          "id": "610fceec-cf9a-4429-91f3-ce8ee7d76bbc",
+          "name": "Quán nhậu Bảy Bự",
+          "category": "an-dem",
+          "address": "Xã Cảnh Thụy, Bắc Ninh",
+          "distance_km": 11.956941333239513
+        },
+        {
+          "id": "3bb9251b-68e3-4135-ac68-35360c276512",
+          "name": "Bánh cuốn nóng Bà Đức",
+          "category": "banh-cuon",
+          "address": "Chợ Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.859517369829563
+        },
+        {
+          "id": "78baba7b-c68d-49eb-bbde-b562b87ece3a",
+          "name": "Phở Gánh Neo",
+          "category": "pho",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.647870011296291
+        },
+        {
+          "id": "3f080d0e-e8da-46a7-be98-2f6b0e3ca90c",
+          "name": "Cà phê Sân Vườn Vũ",
+          "category": "cafe",
+          "address": "Thôn Bồng Lai, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 17.77366290755133
+        },
+        {
+          "id": "66621041-b7aa-4751-953c-faf314a9888b",
+          "name": "Sửa xe máy Đức Hạnh",
+          "category": "sua-xe",
+          "address": "QL37, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 15.344482497051276
+        },
+        {
+          "id": "91c930b8-6b48-4060-902e-ae2ff4b3b913",
+          "name": "NetCore Gaming Neo",
+          "category": "net",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.55632029235116
+        },
+        {
+          "id": "d1136979-d616-45f8-90d8-10c4df3b9129",
+          "name": "Cơm rang Thịnh Neo",
+          "category": "com",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.965528627577633
+        },
+        {
+          "id": "571b9abb-0f72-4dbb-abbb-766b13468227",
+          "name": "Nhà nghỉ Thanh Xuân",
+          "category": "nha-nghi",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.877554954609113
+        },
+        {
+          "id": "9a90d052-e2c2-4300-b799-efaea1256ce4",
+          "name": "Phở Gân Bắc Ninh",
+          "category": "pho",
+          "address": "Phường Vũ Ninh, Bắc Ninh",
+          "distance_km": 0.27513742241335665
+        },
+        {
+          "id": "3102cdcf-1251-48fd-9e59-401fa2005469",
+          "name": "Căn tin & Cafe Thủy Tạ Kinh Bắc",
+          "category": "cafe",
+          "address": "Phường Vũ Ninh, Bắc Ninh",
+          "distance_km": 0.069865090851489
+        },
+        {
+          "id": "345a115b-d265-4b77-abe9-b96a04333f4b",
+          "name": "Cháo vịt 24h ngã tư Cầu Đò",
+          "category": "an-dem",
+          "address": "Ngã tư Cầu Đò, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 14.733649341983748
+        },
+        {
+          "id": "f937aa58-4971-4fc8-84c2-c6de8567fa3e",
+          "name": "Bánh phu thê Xuân Hạ Đình Bảng",
+          "category": "dac-san",
+          "address": "Làng Đình Bảng, phường Đình Bảng, Bắc Ninh",
+          "distance_km": 15.49384028417448
+        }
+      ],
+      "unverified": [
+        "Giò chả Nội Hoàng - Chi nhánh Bắc Giang",
+        "Bún chả Mẹt Yên Dũng",
+        "Giò chả Mến Diên - Quán ăn sáng",
+        "Cà phê Ama Neo"
+      ],
+      "related": [],
+      "p95_ms": 9,
+      "checks": {
+        "intent": true,
+        "specialty": false,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "nhà thuốc gần Neo",
+      "specialty": "nhà thuốc",
+      "categories": [
+        "nha-thuoc"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung"
+        ]
+      },
+      "anchor": {
+        "lat": 21.215,
+        "lng": 106.215,
+        "label": "Xã Yên Dũng"
+      },
+      "exact": [
+        {
+          "id": "923b020a-6a8d-4248-8c61-9a7966b4b9d7",
+          "name": "Nhà thuốc An Sinh",
+          "category": "nha-thuoc",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 0.09395358446045246
+        }
+      ],
+      "unverified": [],
+      "related": [],
+      "p95_ms": 6,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    }
+  ]
+}

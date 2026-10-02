@@ -1,0 +1,233 @@
+{
+  "created_at": "2026-10-02T05:34:11.088Z",
+  "backend": "embedded",
+  "fixture_only": true,
+  "notes": "5 query do người dùng cung cấp; Tân An chưa có cơ sở sắt được xác minh trong fixture. Số liệu không đại diện dữ liệu/live latency toàn quốc.",
+  "queries": [
+    {
+      "query": "quán giò chả Yên Dũng",
+      "specialty": "giò chả",
+      "categories": [
+        "gio-cha"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung",
+          "x_tan_an",
+          "x_tien_phong",
+          "x_canh_thuy"
+        ]
+      },
+      "anchor": {
+        "lat": 21.215,
+        "lng": 106.215,
+        "label": "Xã Yên Dũng"
+      },
+      "exact": [
+        {
+          "id": "56477141-0715-439d-ba5e-e7d4cfa02000",
+          "name": "Giò chả Tư Nhuận Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 6.008385710745712
+        },
+        {
+          "id": "0df537ec-97a0-4700-bc05-041dc6caddcb",
+          "name": "Giò chả Bích Hạnh Nội Hoàng",
+          "category": "gio-cha",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.723973573317537
+        }
+      ],
+      "unverified": [
+        "Giò chả Mến Diên - Quán ăn sáng"
+      ],
+      "related": [
+        "Quán nhậu Bảy Bự",
+        "Trà chanh Nội Hoàng - Chém gió",
+        "Bún chả Mẹt Yên Dũng",
+        "Bánh cuốn nóng Bà Đức",
+        "Cháo vịt 24h ngã tư Cầu Đò",
+        "Phở Gánh Neo",
+        "Cà phê Sân Vườn Vũ",
+        "Cơm rang Thịnh Neo"
+      ],
+      "p95_ms": 12,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "quán cafe Yên Dũng Neo",
+      "specialty": "cà phê",
+      "categories": [
+        "cafe"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung"
+        ]
+      },
+      "anchor": {
+        "lat": 21.215,
+        "lng": 106.215,
+        "label": "Xã Yên Dũng"
+      },
+      "exact": [
+        {
+          "id": "3f080d0e-e8da-46a7-be98-2f6b0e3ca90c",
+          "name": "Cà phê Sân Vườn Vũ",
+          "category": "cafe",
+          "address": "Thôn Bồng Lai, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 3.189928985274112
+        }
+      ],
+      "unverified": [
+        "Cà phê Ama Neo"
+      ],
+      "related": [
+        "Giò chả Mến Diên - Quán ăn sáng",
+        "Bánh cuốn nóng Bà Đức",
+        "Phở Gánh Neo",
+        "Cơm rang Thịnh Neo",
+        "Cháo vịt 24h ngã tư Cầu Đò",
+        "Bún chả Mẹt Yên Dũng"
+      ],
+      "p95_ms": 21,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "cửa hàng sắt Tân An",
+      "specialty": "sắt thép",
+      "categories": [
+        "vlxd"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_tan_an"
+        ]
+      },
+      "anchor": {
+        "lat": 21.26,
+        "lng": 106.2,
+        "label": "Xã Tân An"
+      },
+      "exact": [],
+      "unverified": [],
+      "related": [],
+      "p95_ms": 15,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "cửa hàng bách hóa Yên Dũng",
+      "specialty": "tạp hóa",
+      "categories": [
+        "tap-hoa"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung",
+          "x_tan_an",
+          "x_tien_phong",
+          "x_canh_thuy"
+        ]
+      },
+      "anchor": {
+        "lat": 21.215,
+        "lng": 106.215,
+        "label": "Xã Yên Dũng"
+      },
+      "exact": [
+        {
+          "id": "26fe7e54-0fab-4658-8e88-b3e442bbc589",
+          "name": "Tạp hóa Hồng Vân",
+          "category": "tap-hoa",
+          "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 5.906697499779038
+        }
+      ],
+      "unverified": [],
+      "related": [],
+      "p95_ms": 9,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    },
+    {
+      "query": "nhà thuốc gần Neo",
+      "specialty": "nhà thuốc",
+      "categories": [
+        "nha-thuoc"
+      ],
+      "scope": {
+        "provinces": [
+          "t_bac_ninh"
+        ],
+        "communes": [
+          "x_yen_dung"
+        ]
+      },
+      "anchor": {
+        "lat": 21.215,
+        "lng": 106.215,
+        "label": "Xã Yên Dũng"
+      },
+      "exact": [
+        {
+          "id": "923b020a-6a8d-4248-8c61-9a7966b4b9d7",
+          "name": "Nhà thuốc An Sinh",
+          "category": "nha-thuoc",
+          "address": "TT Neo, xã Yên Dũng, Bắc Ninh",
+          "distance_km": 0.09395358446045246
+        }
+      ],
+      "unverified": [],
+      "related": [],
+      "p95_ms": 8,
+      "checks": {
+        "intent": true,
+        "specialty": true,
+        "narrow_scope": true,
+        "partition": true,
+        "minimum_expected": true,
+        "abstain_tan_an": true
+      }
+    }
+  ]
+}

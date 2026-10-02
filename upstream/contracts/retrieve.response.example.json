@@ -1,0 +1,332 @@
+{
+  "contract_version": "1",
+  "backend": "search-router",
+  "understanding": {
+    "raw": "quán giò chả ngon ở Yên Dũng",
+    "normalized": "quan gio cha ngon o yen dung",
+    "tokens": [
+      "quan",
+      "gio",
+      "cha",
+      "ngon",
+      "yen",
+      "dung"
+    ],
+    "intent": "local_search",
+    "intent_label": "Tìm địa điểm (Local Search)",
+    "specialty": "giò chả",
+    "categories": [
+      "gio-cha"
+    ],
+    "freshness": "any",
+    "locations": [
+      {
+        "id": "h_yen_dung",
+        "name": "Huyện Yên Dũng",
+        "type": "district",
+        "status": "abolished",
+        "matched_term": "yen dung",
+        "fuzzy": false
+      }
+    ],
+    "resolved_current_ids": [
+      "x_yen_dung",
+      "t_bac_ninh",
+      "x_tan_an",
+      "x_tien_phong",
+      "x_canh_thuy"
+    ],
+    "transition": {
+      "from": "Huyện Yên Dũng",
+      "to": [
+        "Xã Yên Dũng",
+        "Xã Tân An",
+        "Xã Tiền Phong",
+        "Xã Cảnh Thụy",
+        "Bắc Ninh"
+      ],
+      "date": "2025-07-01"
+    },
+    "compare_targets": null,
+    "fuzzy": {
+      "used": false,
+      "notes": []
+    }
+  },
+  "budget": {
+    "name": "fast",
+    "reason": "intent local_search → dữ liệu canonical/current fact",
+    "target_ms": "1–4s",
+    "multi_hop": false,
+    "read_evidence": false
+  },
+  "places": {
+    "exact": [
+      {
+        "id": "56477141-0715-439d-ba5e-e7d4cfa02000",
+        "name": "Giò chả Tư Nhuận Nội Hoàng",
+        "category": "gio-cha",
+        "category_label": "Giò chả",
+        "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+        "province_id": "t_bac_ninh",
+        "specialties": [
+          "giò chả",
+          "giò lụa",
+          "chả mực",
+          "đặc sản Nội Hoàng"
+        ],
+        "rating": 4.6,
+        "review_count": 328,
+        "price_label": "120.000–180.000đ/kg",
+        "phone": "0978 345 216",
+        "hours": "05:00–19:00",
+        "open_now": true,
+        "distance_km": 20.39713036030439,
+        "distance_label": "20 km",
+        "image": "https://images.pexels.com/photos/31577034/pexels-photo-31577034.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+        "source": "osm",
+        "verified": true,
+        "note": "Làng nghề giò chả Nội Hoàng truyền thống, sản phẩm OCOP 4 sao.",
+        "score": 166.8,
+        "lat": 21.2465,
+        "lng": 106.2621,
+        "updated_at": "2026-10-02T04:23:18.564Z",
+        "why": [
+          "đúng chuyên ngành “giò chả”",
+          "category = Giò chả",
+          "đúng địa bàn",
+          "đã xác minh"
+        ]
+      },
+      {
+        "id": "0df537ec-97a0-4700-bc05-041dc6caddcb",
+        "name": "Giò chả Bích Hạnh Nội Hoàng",
+        "category": "gio-cha",
+        "category_label": "Giò chả",
+        "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+        "province_id": "t_bac_ninh",
+        "specialties": [
+          "giò chả",
+          "giò tai",
+          "chả quế",
+          "đặc sản Nội Hoàng"
+        ],
+        "rating": 4.5,
+        "review_count": 214,
+        "price_label": "115.000–170.000đ/kg",
+        "phone": "0912 670 384",
+        "hours": "05:30–19:00",
+        "open_now": true,
+        "distance_km": 20.12095488864115,
+        "distance_label": "20 km",
+        "image": "https://images.pexels.com/photos/36752864/pexels-photo-36752864.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+        "source": "osm",
+        "verified": true,
+        "note": null,
+        "score": 166.2,
+        "lat": 21.2451,
+        "lng": 106.2598,
+        "updated_at": "2026-10-02T04:23:18.566Z",
+        "why": [
+          "đúng chuyên ngành “giò chả”",
+          "category = Giò chả",
+          "đúng địa bàn",
+          "đã xác minh"
+        ]
+      }
+    ],
+    "unverified": [
+      {
+        "id": "1307e0e2-01d2-4a26-8413-ff19a0028af0",
+        "name": "Giò chả Mến Diên - Quán ăn sáng",
+        "category": "gio-cha",
+        "category_label": "Giò chả",
+        "address": "Thị trấn Neo, xã Yên Dũng, Bắc Ninh",
+        "province_id": "t_bac_ninh",
+        "specialties": [
+          "giò chả",
+          "bánh giò",
+          "xôi"
+        ],
+        "rating": 4.2,
+        "review_count": 63,
+        "price_label": "15.000–45.000đ",
+        "phone": null,
+        "hours": "05:00–10:30",
+        "open_now": false,
+        "distance_km": 14.894371291615053,
+        "distance_label": "15 km",
+        "image": "https://images.pexels.com/photos/31577034/pexels-photo-31577034.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+        "source": "web",
+        "verified": false,
+        "note": "Ghi nhận từ web, chưa đối chứng đủ 2 nguồn độc lập.",
+        "score": 154.4,
+        "lat": 21.2132,
+        "lng": 106.217,
+        "updated_at": "2026-10-02T04:23:18.567Z",
+        "why": [
+          "đúng chuyên ngành “giò chả”",
+          "category = Giò chả",
+          "đúng địa bàn"
+        ]
+      }
+    ],
+    "related": [
+      {
+        "id": "610fceec-cf9a-4429-91f3-ce8ee7d76bbc",
+        "name": "Quán nhậu Bảy Bự",
+        "category": "an-dem",
+        "category_label": "Quán nhậu · Ăn đêm",
+        "address": "Xã Cảnh Thụy, Bắc Ninh",
+        "province_id": "t_bac_ninh",
+        "specialties": [
+          "quán nhậu",
+          "ăn đêm",
+          "lẩu",
+          "chân gà",
+          "bia"
+        ],
+        "rating": 4.2,
+        "review_count": 231,
+        "price_label": "100.000–400.000đ",
+        "phone": "0963 118 905",
+        "hours": "15:00–02:00",
+        "open_now": false,
+        "distance_km": 11.956941333239513,
+        "distance_label": "12 km",
+        "image": "https://images.pexels.com/photos/33022448/pexels-photo-33022448.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=627&w=1200",
+        "source": "osm",
+        "verified": true,
+        "note": "Mở đến 2h sáng, đông khách về đêm.",
+        "score": 128.8,
+        "lat": 21.1705,
+        "lng": 106.1904,
+        "updated_at": "2026-10-02T04:23:18.576Z",
+        "why": [
+          "đúng địa bàn",
+          "đã xác minh"
+        ]
+      }
+    ],
+    "candidates": [
+      {
+        "id": "c130f36a-b985-44ec-b535-55a87eaf146d",
+        "name": "Giò chả Đức Hường Nội Hoàng",
+        "specialty": "giò chả",
+        "address": "Thôn Nội Hoàng, xã Yên Dũng, Bắc Ninh",
+        "source_url": "https://dulichkinhbac.vn/blog/an-gi-o-yen-dung-gio-cha-noi-hoang",
+        "source_title": "Ăn gì ở Yên Dũng? Đặc sản giò chả Nội Hoàng",
+        "evidence": "Được nhắc trong bài blog du lịch Kinh Bắc là một trong các cơ sở lâu đời tại làng Nội Hoàng, chưa có số điện thoại/giờ mở cửa."
+      }
+    ]
+  },
+  "docs": [
+    {
+      "id": "3864910b-f167-43d4-b65e-92cb2544c716",
+      "title": "Ăn gì ở Yên Dũng? Một vòng đặc sản huyện cũ nức tiếng giò chả Nội Hoàng",
+      "url": "https://dulichkinhbac.vn/blog/an-gi-o-yen-dung-gio-cha-noi-hoang",
+      "domain": "dulichkinhbac.vn",
+      "source_type": "web",
+      "snippet": "Giò chả Nội Hoàng là đặc sản hàng trăm năm của làng Nội Hoàng (xã Yên Dũng hiện nay). Tiếng lành xa nhất phải kể cơ sở Tư Nhuận, Bích Hạnh, Đức Hường.",
+      "content": "Làng Nội Hoàng (nay thuộc xã Yên Dũng, tỉnh Bắc Ninh; trước đây là xã Nội Hoàng, huyện Yên Dũng, Bắc Giang) nổi tiếng nghề làm giò chả hàng trăm năm tuổi. Giò đ…",
+      "authority": 0.55,
+      "published_at": "2026-06-24T04:23:18.612Z",
+      "entities": [
+        "gio-cha",
+        "noi-hoang",
+        "yen-dung",
+        "dac-san",
+        "an-gi"
+      ],
+      "score": 77.2,
+      "why": [
+        "có nhắc \"giò chả\"",
+        "đúng địa danh Huyện Yên Dũng"
+      ],
+      "origin": "corpus"
+    },
+    {
+      "id": "2121fc1f-4b4d-4ed3-baa3-dd5ff36aea61",
+      "title": "Giò chả Nội Hoàng đạt sản phẩm OCOP 4 sao cấp tỉnh",
+      "url": "https://nongnghiep.vn/gio-cha-noi-hoang-ocop-4-sao.html",
+      "domain": "nongnghiep.vn",
+      "source_type": "news",
+      "snippet": "Làng nghề giò chả Nội Hoàng (huyện Yên Dũng, Bắc Giang) có 3 cơ sở đạt chứng nhận OCOP 4 sao, quy trình an toàn thực phẩm được chuẩn hóa.",
+      "content": "Giò chả Nội Hoàng là một trong những sản phẩm làng nghề tiêu biểu của vùng Kinh Bắc, từng đạt chứng nhận sản phẩm OCOP 4 sao cấp tỉnh Bắc Giang. Điểm đặc trưng:…",
+      "authority": 0.8,
+      "published_at": "2025-09-17T04:23:18.612Z",
+      "entities": [
+        "gio-cha",
+        "noi-hoang",
+        "ocop",
+        "yen-dung",
+        "bac-giang"
+      ],
+      "score": 73.3,
+      "why": [
+        "có nhắc \"giò chả\"",
+        "đúng địa danh Huyện Yên Dũng"
+      ],
+      "origin": "corpus"
+    }
+  ],
+  "coverage": {
+    "gap": false,
+    "reason": null,
+    "widened": false
+  },
+  "anchor": {
+    "lat": 21.1861,
+    "lng": 106.0763,
+    "label": "Bắc Ninh"
+  },
+  "scope": {
+    "provinces": [
+      "t_bac_ninh"
+    ],
+    "communes": [
+      "x_yen_dung",
+      "x_tan_an",
+      "x_tien_phong",
+      "x_canh_thuy"
+    ]
+  },
+  "quality": {
+    "confidence": 0.84,
+    "coverage": "good",
+    "independent_sources": 8,
+    "avg_authority": 0.62
+  },
+  "federation": [
+    {
+      "provider": "canonical-places",
+      "lane": "places · SQL candidate generation",
+      "status": "ok",
+      "ms": 16,
+      "count": 4
+    },
+    {
+      "provider": "corpus",
+      "lane": "documents · full-text (GIN)",
+      "status": "ok",
+      "ms": 16,
+      "count": 8
+    },
+    {
+      "provider": "search-hub",
+      "lane": "web · news · gov · legal",
+      "status": "skipped",
+      "ms": 0,
+      "count": 0,
+      "detail": "chưa cấu hình SEARCH_HUB_URL"
+    }
+  ],
+  "widening": [],
+  "timings": {
+    "load_graph_ms": 6,
+    "understand_ms": 3,
+    "retrieve_ms": 16,
+    "rerank_ms": 0,
+    "total_ms": 39
+  }
+}

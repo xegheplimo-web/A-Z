@@ -1,0 +1,15 @@
+[
+  {
+    "sourceType": "website",
+    "sourceId": "example-outlet-tan-an",
+    "sourceUrl": "https://merchant.example/outlets/tan-an",
+    "observedAt": "2026-01-01T08:00:00Z",
+    "name": "Cửa hàng sắt — MẪU KIỂM THỬ",
+    "address": "10 Đường mẫu, Tân An",
+    "communeId": "x_tan_an",
+    "provinceId": "t_bac_ninh",
+    "category": "vlxd",
+    "specialties": ["sắt thép"],
+    "fixture": true
+  }
+]

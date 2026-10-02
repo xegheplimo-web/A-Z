@@ -1,0 +1,11 @@
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { fromWire } from "../src/core/wire";
+const result = fromWire(JSON.parse(readFileSync("reports/core-contract-fixture.json", "utf8")));
+assert.equal(result.backend, "search-router");
+assert.equal(result.understanding.specialty, "giò chả");
+assert.equal(result.places.exact.length, 2);
+assert.equal(result.places.unverified.length, 1);
+assert.equal(result.places.related.length, 1);
+assert(result.federation.some(f=>f.provider==="live-web" && f.status==="skipped"));
+console.log("PASS Python FastAPI response -> TypeScript fromWire: contract v1, exact/unverified/related and progressive-stop preserved.");
