@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Exec(git)",
+      "Exec(npm)",
+      "Exec(npx)",
+      "Exec(node)",
+      "Exec(tsx)",
+      "Exec(eslint)",
+      "Exec(prettier)",
+      "Exec(vitest)",
+      "Exec(drizzle-kit)",
+      "Exec(curl)",
+      "Exec(docker)",
+      "Exec(python)",
+      "Exec(uv)",
+      "Exec(ruff)",
+      "Exec(pytest)"
+    ],
+    "deny": ["Exec(sudo)", "Write(.env*)"]
+  }
+}

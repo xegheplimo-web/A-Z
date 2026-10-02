@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-10-02",
+  "stacks": ["node-npm-ts", "python"],
+  "created": [
+    ".devin/config.json",
+    ".editorconfig",
+    ".prettierrc.json",
+    ".pre-commit-config.yaml",
+    "AGENTS.md"
+  ],
+  "skipped_existing": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/cd.yml",
+    "eslint.config.mjs",
+    ".gitignore"
+  ],
+  "skipped": {
+    "vitest": "project uses tsx conformance scripts (scripts/conformance.ts, test-auth.ts, test-pilot.ts, smoke-upstreams.ts) wired into CI instead of a unit-test runner"
+  }
+}
