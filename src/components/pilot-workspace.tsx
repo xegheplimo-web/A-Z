@@ -27,13 +27,17 @@ export function PilotWorkspace({ baseline, current }: { baseline: Report; curren
   const [backendNote, setBackendNote] = useState("");
 
   const load = useCallback(async (token = "") => {
-    const response = await fetch("/v1/pilot", { cache: "no-store", headers: token ? { authorization: `Bearer ${token}` } : {} });
-    if (!response.ok) throw new Error("Không đọc được dữ liệu pilot.");
-    const data = await response.json();
-    if (data.available === false) { setBackendNote(data.note); return; }
-    setSnapshot(data); setAuthorized(!!data.capabilities?.write);
+    try {
+      const response = await fetch("/v1/pilot", { cache: "no-store", headers: token ? { authorization: `Bearer ${token}` } : {} });
+      if (!response.ok) throw new Error("Không đọc được dữ liệu pilot.");
+      const data = await response.json();
+      if (data.available === false) { setBackendNote(data.note); return; }
+      setSnapshot(data); setAuthorized(!!data.capabilities?.write);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Kết nối thất bại.");
+    }
   }, []);
-  useEffect(() => { load().catch(e=>setError(e.message)); }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   async function unlock() {
     setBusy(true); setError("");
