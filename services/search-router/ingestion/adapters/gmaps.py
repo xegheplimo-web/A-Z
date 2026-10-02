@@ -57,7 +57,9 @@ class GoogleMapsAdapter:
             stream: Iterable[str] = self._lines
         else:
             path = Path(str(context.param("ndjson", "")))
-            f = path.open("r", encoding="utf-8", errors="replace")
+            # newline="" keeps raw bytes/line endings visible so checkpoint
+            # byte offsets and the dataset sha stay accurate on Windows too.
+            f = path.open("r", encoding="utf-8", errors="replace", newline="")
             if offset:
                 f.seek(offset)
             stream = f

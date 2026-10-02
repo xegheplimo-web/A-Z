@@ -127,12 +127,39 @@ def _osmium_available() -> bool:
     return True
 
 
+def _parse_bbox(raw: Any) -> tuple[float, float, float, float] | None:
+    """``"min_lon,min_lat,max_lon,max_lat"`` → tuple; None when unset."""
+    if raw in (None, ""):
+        return None
+    try:
+        parts = [float(p) for p in str(raw).split(",")]
+    except ValueError:
+        parts = []
+    if len(parts) != 4 or not (parts[0] < parts[2] and parts[1] < parts[3]):
+        raise ValueError("bbox must be 'min_lon,min_lat,max_lon,max_lat'")
+    return parts[0], parts[1], parts[2], parts[3]
+
+
+def _in_bbox(bbox: tuple[float, float, float, float] | None, rec: RawPlaceRecord) -> bool:
+    """bbox filter — coord-less records drop when a box is set (they can
+    never be anchored or distance-filtered downstream anyway)."""
+    if bbox is None:
+        return True
+    if rec.lat is None or rec.lon is None:
+        return False
+    min_lon, min_lat, max_lon, max_lat = bbox
+    return min_lon <= rec.lon <= max_lon and min_lat <= rec.lat <= max_lat
+
+
 class OsmPbfAdapter:
     """Streams POI records (node/way/relation) from a PBF extract.
 
     Context parameters: ``pbf`` — path to the .osm.pbf file;
     ``backend`` — ``auto``|``osmium``|``pbf`` (default auto: pyosmium when
-    installed, else the stdlib multi-pass reader).
+    installed, else the stdlib multi-pass reader);
+    ``bbox`` — optional ``min_lon,min_lat,max_lon,max_lat`` crop for
+    pilot-area imports (way/relation membership is judged on the emitted
+    centroid, so edge-straddling polygons follow their centroid).
 
     Checkpoint: ``{"stage": ..., "offset": N, "index": I}`` — safe at
     blob/element granularity; ``scan``/``emit`` stages restart wholesale.
@@ -154,18 +181,21 @@ class OsmPbfAdapter:
     async def ingest(self, context: IngestionContext) -> AsyncIterator[RawPlaceRecord]:
         path = self._path or Path(str(context.param("pbf", "")))
         backend = str(context.param("backend", self._backend))
+        bbox = _parse_bbox(context.param("bbox"))
         if backend == "osmium" or (backend == "auto" and _osmium_available()):
             from ingestion.adapters.osm_osmium import OsmiumPbfAdapter
 
             inner = OsmiumPbfAdapter(path)
             async for rec in inner.ingest(context):
-                yield rec
+                if _in_bbox(bbox, rec):
+                    yield rec
             # surface the backend that actually ran in run metadata
             self.adapter_version = inner.adapter_version
             self.source_dataset = inner.source_dataset
             return
         async for rec in self._ingest_fallback(path, context):
-            yield rec
+            if _in_bbox(bbox, rec):
+                yield rec
 
     # ── stdlib three-pass reader ────────────────────────────────────────
 

@@ -5,8 +5,13 @@ Examples:
     # gosom/google-maps-scraper NDJSON output
     uv run python -m scripts.ingest --provider google_maps --file results.ndjson
 
-    # nationwide OSM bootstrap (Geofabrik extract, NOT Overpass)
-    uv run python -m scripts.ingest --provider osm --file vietnam-latest.osm.pbf
+    # nationwide OSM bootstrap (Geofabrik extract, NOT Overpass);
+    # --param bbox=min_lon,min_lat,max_lon,max_lat crops to a pilot area
+    uv run python -m scripts.ingest --provider osm --file vietnam-latest.osm.pbf \
+        --param bbox=105.85,21.0,106.95,21.65
+
+    # operator-curated business rows (reviewed JSONL, no scraping)
+    uv run python -m scripts.ingest --provider operator_pilot --file pilot.ndjson
 
     # resume a crashed/failed run from its checkpoint
     uv run python -m scripts.ingest --provider osm --file vietnam-latest.osm.pbf --resume-run 8421
@@ -55,12 +60,16 @@ def _exit_code(result: dict | None) -> int:
 
 async def _main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="P15 source ingestion → raw staging")
-    ap.add_argument("--provider", required=True, choices=["google_maps", "osm", "web_corpus"])
+    ap.add_argument(
+        "--provider",
+        required=True,
+        choices=["google_maps", "osm", "web_corpus", "operator_pilot"],
+    )
     ap.add_argument(
         "--file",
         type=Path,
         default=None,
-        help="source payload: NDJSON (google_maps/web_corpus) or .osm.pbf (osm)",
+        help="source payload: NDJSON (google_maps/web_corpus/operator_pilot) or .osm.pbf (osm)",
     )
     ap.add_argument(
         "--param",
@@ -111,6 +120,15 @@ async def _main(argv: list[str] | None = None) -> int:
             if args.file:
                 params.setdefault("pbf", str(args.file))
             adapter = OsmPbfAdapter()
+        elif args.provider == "operator_pilot":
+            from ingestion.adapters.ndjson import NdjsonAdapter
+
+            if not args.file and not args.resume_run:
+                print("--file required for operator_pilot (or --resume-run)", file=sys.stderr)
+                return 2
+            if args.file:
+                params.setdefault("ndjson", str(args.file))
+            adapter = NdjsonAdapter()
         else:
             from ingestion.adapters.web_corpus import WebCorpusAdapter
 
