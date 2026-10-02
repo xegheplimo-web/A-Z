@@ -8,9 +8,10 @@ The two must never alias: a fresh single-source record is confidently
 
 ``verification_level`` ladder (monotone in evidence strength):
 
-- ``observed``      — default; one provider, no review, no corroboration.
-- ``corroborated``  — ≥2 distinct providers sighted the same canonical
-                      place (source_count, not record count).
+- ``observed``      — default; one evidence origin, no review.
+- ``corroborated``  — ≥2 *independent evidence keys* (P-DATA-1A.1) —
+                      see :func:`independence_key`. Two providers citing
+                      the same URL are one source, not two.
 - ``verified``      — an operator-reviewed record with COMPLETE evidence:
                       ``review_status='verified'`` + ``source_url`` +
                       ``reviewed_at`` + ``verification_method``.
@@ -28,6 +29,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
+
+from ingestion.base import VERIFICATION_METHODS
+from resolution.normalize import website_domain
 
 VERIFICATION_LEVELS = ("observed", "corroborated", "verified", "authoritative")
 LEVEL_RANK = {level: i for i, level in enumerate(VERIFICATION_LEVELS)}
@@ -58,14 +62,40 @@ def _latest(contribs: list[Any], *attrs: str) -> datetime | None:
     return max(stamps) if stamps else None
 
 
+def independence_key(rec: Any, policies: dict[str, dict]) -> str:
+    """Identity of the EVIDENCE behind a contribution (P-DATA-1A.1).
+
+    Corroboration must count independent evidence origins, not adapters:
+    ``web_corpus`` and ``operator_pilot`` both citing ``cuahangabc.vn``
+    are one source, not two. Precedence:
+
+    - ``authority:<provider>`` — a first-party provider's dataset is its
+      own evidence lane regardless of which page it cites.
+    - ``url:<host>`` — the normalized host of ``source_url`` (lowercase,
+      ``www.`` stripped). Domain-level on purpose: every page on the
+      business's site is the same underlying evidence, and collapsing
+      two platform URLs is the safe direction (never inflates trust).
+    - ``provider:<provider>`` — a bare observation keys on its provider.
+    """
+    provider = getattr(rec, "provider", "") or ""
+    if (policies.get(provider) or {}).get("kind") == "authority":
+        return f"authority:{provider}"
+    url = getattr(rec, "source_url", None)
+    host = website_domain(url) if url else None
+    if host:
+        return f"url:{host}"
+    return f"provider:{provider}"
+
+
 def complete_review(rec: Any) -> bool:
     """A manual-verification claim only counts with the full evidence
-    tuple: status + source_url + reviewed_at + verification_method.
-    ``reviewed_by`` is optional provenance, not required evidence."""
+    tuple: status + source_url + reviewed_at + verification_method —
+    and the method must be in the operator vocabulary. ``reviewed_by``
+    is optional provenance, not required evidence."""
     return (
         getattr(rec, "review_status", None) == REVIEW_VERIFIED
         and getattr(rec, "reviewed_at", None) is not None
-        and bool(getattr(rec, "verification_method", None))
+        and getattr(rec, "verification_method", None) in VERIFICATION_METHODS
         and bool(getattr(rec, "source_url", None))
     )
 
@@ -93,7 +123,7 @@ def verification_for(
             _as_dt(getattr(best, "reviewed_at", None)),
         )
 
-    if len({c.provider for c in contribs}) >= 2:
+    if len({independence_key(c, policies) for c in contribs}) >= 2:
         return "corroborated", METHOD_MULTI_SOURCE, _latest(contribs, "observed_at")
 
     return "observed", None, None

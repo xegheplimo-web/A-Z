@@ -17,6 +17,24 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol
 
+# P-DATA-1A.1 — operator-claimable verification methods. A review's
+# ``verification_method`` must come from this vocabulary; anything else
+# is rejected at validation (``unknown_verification_method``) so trust
+# claims stay auditable. Resolution-emitted methods (``multi_source``,
+# ``first_party``, ``manual_review``) live in ``resolution.verification``
+# and are assigned, never claimed through a source record.
+VERIFICATION_METHODS = frozenset(
+    {
+        "official_website",       # checked against the business's own site
+        "official_registry",      # government/business registry listing
+        "merchant_confirmation",  # owner or staff confirmed directly
+        "phone_confirmation",     # called the listed phone number
+        "physical_check",         # visited the address in person
+        "cross_source_review",    # compared across sources by hand
+        "document_verification",  # license/paperwork inspected
+    }
+)
+
 
 @dataclass(frozen=True)
 class SourceProbe:

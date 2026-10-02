@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from ingestion.base import RawPlaceRecord
+from ingestion.base import VERIFICATION_METHODS, RawPlaceRecord
 
 # Plausible Vietnam extent — generous, matches the P14B geometry box.
 _VN_LAT_MIN, _VN_LAT_MAX = 6.0, 24.0
@@ -93,6 +93,8 @@ def validate(rec: RawPlaceRecord) -> list[str]:
     # P-DATA-1A — a verified claim must carry its evidence tuple.
     # Reject loudly: silently downgrading would let an operator believe
     # the review counted when it didn't.
+    if rec.verification_method and rec.verification_method not in VERIFICATION_METHODS:
+        errs.append("unknown_verification_method")
     if rec.review_status is not None:
         if rec.review_status not in _REVIEW_STATUSES:
             errs.append("invalid_review_status")

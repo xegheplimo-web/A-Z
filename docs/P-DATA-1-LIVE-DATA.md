@@ -27,11 +27,19 @@ under `--gate` (precision@10 ≥ 0.80, generic noise < 10%, outside-area
 `verification_level` + `verification_method` are the trust signal. The
 two never alias. Level ladder (weakest → strongest):
 
-- `observed` — single provider, no review. Default for all raw records.
-- `corroborated` — ≥2 distinct providers (`source_count`, not records).
+- `observed` — single evidence origin, no review. Default for all raw
+  records.
+- `corroborated` — ≥2 **independent evidence keys** (P-DATA-1A.1), not
+  provider count: `authority:<provider>` for first-party datasets,
+  `url:<host>` for records citing a `source_url`, `provider:<provider>`
+  for bare observations. Two adapters citing the same domain are one
+  source.
 - `verified` — operator review with the **complete evidence tuple**:
   `review_status="verified"` + `source_url` + `reviewed_at` +
-  `verification_method` (`reviewed_by` optional provenance).
+  `verification_method` (`reviewed_by` optional provenance), and the
+  method must be in the allowlist: `official_website`,
+  `official_registry`, `merchant_confirmation`, `phone_confirmation`,
+  `physical_check`, `cross_source_review`, `document_verification`.
 - `authoritative` — contributor from a `source_policies.kind='authority'`
   provider (first-party truth).
 
@@ -44,7 +52,9 @@ matter how high its resolution confidence.
 
 Reviewed NDJSON rows carry the tuple inline; `review_status="verified"`
 with missing evidence is rejected to the DLQ as
-`incomplete_review_evidence` rather than silently trusted:
+`incomplete_review_evidence`, and a `verification_method` outside the
+allowlist as `unknown_verification_method` — rather than silently
+trusted:
 
 ```json
 {"name": "...", "external_id": "...", "source_url": "...",

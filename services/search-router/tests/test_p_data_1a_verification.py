@@ -16,12 +16,17 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 from ingestion.adapters.ndjson import NdjsonAdapter, entry_to_record
-from ingestion.base import IngestionContext
+from ingestion.base import VERIFICATION_METHODS, IngestionContext
 from ingestion.runner import _RECORD_COLS, _row_dict
 from ingestion.validate import validate
 from resolution.runner import run_resolution
 from resolution.store import DictCanonicalStore
-from resolution.verification import LEVEL_RANK, complete_review, verification_for
+from resolution.verification import (
+    LEVEL_RANK,
+    complete_review,
+    independence_key,
+    verification_for,
+)
 from serving.places.projection import (
     doc_from_index_source,
     doc_to_index_source,
@@ -133,6 +138,119 @@ class TestVerificationLevels:
         assert not complete_review(_src(**_reviewed(source_url=None)))
 
 
+class TestEvidenceIndependence:
+    """P-DATA-1A.1 — corroboration counts independent EVIDENCE keys,
+    not adapters. Two providers citing the same URL are one source."""
+
+    def test_same_source_domain_two_providers_stays_observed(self):
+        level, _, at = verification_for(
+            [
+                _src("web_corpus", source_url="https://cuahangabc.vn/menu"),
+                _src("operator_pilot", source_url="https://cuahangabc.vn/about"),
+            ],
+            {},
+        )
+        assert level == "observed" and at is None
+
+    def test_same_exact_url_two_providers_stays_observed(self):
+        url = "https://review.vn/p/123"
+        level, _, _ = verification_for(
+            [_src("a", source_url=url), _src("b", source_url=url)], {}
+        )
+        assert level == "observed"
+
+    def test_www_and_scheme_variants_collapse(self):
+        level, _, _ = verification_for(
+            [
+                _src("a", source_url="https://www.cuahangabc.vn"),
+                _src("b", source_url="http://cuahangabc.vn"),
+            ],
+            {},
+        )
+        assert level == "observed"
+
+    def test_two_independent_urls_corroborate(self):
+        level, method, at = verification_for(
+            [
+                _src("web_corpus", source_url="https://cuahangabc.vn", observed_at=OLD),
+                _src("news_corpus", source_url="https://review.vn/p/123", observed_at=NOW),
+            ],
+            {},
+        )
+        assert level == "corroborated" and method == "multi_source" and at == NOW
+
+    def test_url_and_bare_provider_are_two_keys(self):
+        """A URL-cited observation plus an independent provider record
+        (no URL — keys on provider identity) do corroborate."""
+        level, _, _ = verification_for(
+            [_src("web_corpus", source_url="https://cuahangabc.vn"), _src("osm")], {}
+        )
+        assert level == "corroborated"
+
+    def test_key_precedence_authority_then_url_then_provider(self):
+        policies = {"gov": {"kind": "authority"}}
+        # authority records key on the dataset, not the cited page
+        assert independence_key(
+            _src("gov", source_url="https://dangkykinhdoanh.gov.vn/p/1"), policies
+        ) == "authority:gov"
+        assert independence_key(
+            _src("web", source_url="https://cuahangabc.vn/x"), {}
+        ) == "url:cuahangabc.vn"
+        assert independence_key(_src("osm"), {}) == "provider:osm"
+
+
+class TestVerificationMethodAllowlist:
+    """verification_method is a controlled vocabulary — a review claim
+    with a free-form method is rejected at ingest and can never elevate
+    at resolution."""
+
+    def test_all_allowlisted_methods_pass_ingest(self):
+        for method in sorted(VERIFICATION_METHODS):
+            rec = entry_to_record(
+                {
+                    "name": "Cửa hàng A",
+                    "source_url": "https://example.com/p/1",
+                    "review_status": "verified",
+                    "reviewed_at": "2026-10-01T08:00:00Z",
+                    "verification_method": method,
+                },
+                fetched_at=NOW,
+                provider="operator_pilot",
+            )
+            assert validate(rec) == [], method
+
+    def test_unknown_method_rejected_at_ingest(self):
+        rec = entry_to_record(
+            {
+                "name": "Cửa hàng A",
+                "source_url": "https://example.com/p/1",
+                "review_status": "verified",
+                "reviewed_at": "2026-10-01T08:00:00Z",
+                "verification_method": "trust_me",
+            },
+            fetched_at=NOW,
+            provider="operator_pilot",
+        )
+        assert "unknown_verification_method" in validate(rec)
+
+    def test_unknown_method_rejected_without_review_claim(self):
+        """The vocabulary stays clean even on inert metadata."""
+        rec = entry_to_record(
+            {"name": "Cửa hàng A", "verification_method": "abc"},
+            fetched_at=NOW,
+            provider="operator_pilot",
+        )
+        assert "unknown_verification_method" in validate(rec)
+
+    def test_unknown_method_cannot_elevate_at_resolution(self):
+        """Defense in depth: a staged row that bypassed validation still
+        cannot reach 'verified' with a free-form method."""
+        level, method, at = verification_for(
+            [_src(**_reviewed(verification_method="trust_me"))], {}
+        )
+        assert (level, method, at) == ("observed", None, None)
+
+
 # ── resolution end-to-end ────────────────────────────────────────────────
 
 
@@ -241,6 +359,46 @@ class TestResolutionVerification:
             store=store,
         )
         assert store.places[1].last_seen == NOW
+
+    def test_merged_same_url_stays_observed(self):
+        """P-DATA-1A.1 end-to-end: two providers citing the same evidence
+        URL merge into one place that stays 'observed'."""
+        store = DictCanonicalStore()
+        _run(
+            [
+                _row(1, raw_name="Phở Thìn", source_url="https://review.vn/p/1"),
+                _row(
+                    2,
+                    provider="google_maps",
+                    external_id="ChIJx",
+                    raw_name="Phở Thìn",
+                    source_url="https://review.vn/p/1",
+                ),
+            ],
+            store=store,
+        )
+        place = store.places[1]
+        assert place.verification_level == "observed"
+        assert place.verified_at is None
+
+    def test_merged_independent_urls_corroborate(self):
+        store = DictCanonicalStore()
+        _run(
+            [
+                _row(1, raw_name="Phở Thìn", source_url="https://review.vn/p/1"),
+                _row(
+                    2,
+                    provider="google_maps",
+                    external_id="ChIJx",
+                    raw_name="Phở Thìn",
+                    source_url="https://dulich.vn/pho-thin",
+                ),
+            ],
+            store=store,
+        )
+        place = store.places[1]
+        assert place.verification_level == "corroborated"
+        assert place.verification_method == "multi_source"
 
 
 # ── projection ───────────────────────────────────────────────────────────
