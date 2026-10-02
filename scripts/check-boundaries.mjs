@@ -10,8 +10,9 @@
 // ---------------------------------------------------------------------------
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = new URL("../src", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../src", import.meta.url));
 const BRAIN_TABLES = ["adminUnits", "places", "placeCandidates", "documents", "coverageGaps", "legalEntities", "placeObservations", "fieldProvenance", "coverageCells", "coverageJobs"];
 const FACADE_DIRS = ["app", "lib", "components", "core"];
 

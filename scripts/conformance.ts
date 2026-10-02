@@ -62,7 +62,7 @@ async function main() {
   void toWire;
 
   // ---- B/C. một brain + parity ----
-  const ref: ChildProcess = spawn("npx", ["tsx", "scripts/reference-retrieve-server.ts", String(REF_PORT)], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env } });
+  const ref: ChildProcess = spawn(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/reference-retrieve-server.ts", String(REF_PORT)], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env } });
   try {
     ok("B0 server tham chiếu (tiến trình riêng) lên", await waitFor(`http://127.0.0.1:${REF_PORT}/v1/health`));
 
