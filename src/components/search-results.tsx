@@ -21,6 +21,7 @@ import {
   Info,
 } from "lucide-react";
 import type { VietScopeResponse, PublicPlace } from "@/lib/pipeline";
+import { InteractionProbe } from "./interaction-probe";
 import { TracePanel } from "./trace-panel";
 import { RelatedForm } from "./related-form";
 import { FeedbackWidget, PromoteButton } from "./flywheel-actions";
@@ -80,8 +81,21 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
     compare: "So sánh", admin_info: "Địa danh & hành chính", product: "Sản phẩm", news: "Tin tức", general: "Tìm kiếm tổng hợp",
   };
 
+  // Impressions: rank chạy liên tục qua các lane (exact → unverified → related → web)
+  // để click/xếp hạng đối chiếu được với vị trí hiển thị.
+  const impressionList = [
+    ...places.exact,
+    ...places.unverified,
+    ...places.related.slice(0, 4),
+  ].map((p, i) => ({ result_id: p.id, rank: i + 1 }));
+  const webShown = web.slice(0, 6);
+  const impressions = impressionList.concat(
+    webShown.map((w, j) => ({ result_id: w.url, rank: impressionList.length + j + 1 })),
+  );
+
   return (
     <div className="space-y-6">
+      <InteractionProbe traceId={data.trace_id} query={data.query} impressions={impressions} />
       {/* Chỉ hiện ngữ cảnh có ích cho người tìm kiếm; chẩn đoán nằm trong Chi tiết tìm kiếm. */}
       <div className="rise flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-fog-2">
         <span className="flex items-center gap-1.5 font-medium text-gold"><Sparkles className="size-3.5" />{intentNames[und.intent] ?? "Tìm kiếm tổng hợp"}</span>
@@ -187,8 +201,8 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                 icon={<ShieldCheck className="size-4 text-jade" />}
               />
               <div className="grid gap-3 sm:grid-cols-2">
-                {places.exact.map((p) => (
-                  <PlaceCard key={p.id} p={p} />
+                {places.exact.map((p, i) => (
+                  <PlaceCard key={p.id} p={p} rank={i + 1} />
                 ))}
               </div>
             </section>
@@ -204,8 +218,8 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                 tone="amber"
               />
               <div className="grid gap-3 sm:grid-cols-2">
-                {places.unverified.map((p) => (
-                  <PlaceCard key={p.id} p={p} dim />
+                {places.unverified.map((p, i) => (
+                  <PlaceCard key={p.id} p={p} dim rank={places.exact.length + i + 1} />
                 ))}
               </div>
             </section>
@@ -246,8 +260,8 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                 tone="dim"
               />
               <div className="grid gap-3 sm:grid-cols-2">
-                {places.related.slice(0, 4).map((p) => (
-                  <PlaceCard key={p.id} p={p} compact dim />
+                {places.related.slice(0, 4).map((p, i) => (
+                  <PlaceCard key={p.id} p={p} compact dim rank={places.exact.length + places.unverified.length + i + 1} />
                 ))}
               </div>
             </section>
@@ -271,6 +285,9 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                       href={w.url}
                       target="_blank"
                       rel="noreferrer"
+                      data-track="click"
+                      data-result-id={w.url}
+                      data-rank={impressionList.length + i + 1}
                       className="group block rounded-xl border border-line bg-ink-2/50 px-4 py-3 transition-colors hover:border-line-2 hover:bg-ink-2"
                     >
                       <div className="flex items-center gap-2 text-[11px] text-fog-2">
@@ -313,6 +330,9 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                         href={s.url}
                         target="_blank"
                         rel="noreferrer"
+                        data-track="source_open"
+                        data-result-id={s.url}
+                        data-rank={s.n}
                         className="group flex gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-ink-3/80"
                       >
                         <span className="cite mt-0.5 shrink-0">{s.n}</span>
@@ -445,7 +465,7 @@ function SectionHead({
   );
 }
 
-function PlaceCard({ p, dim = false, compact = false }: { p: PublicPlace; dim?: boolean; compact?: boolean }) {
+function PlaceCard({ p, dim = false, compact = false, rank }: { p: PublicPlace; dim?: boolean; compact?: boolean; rank?: number }) {
   const grad = CATEGORY_GRADIENT[p.categoryLabel === "Cà phê" ? "cafe" : ""] ?? null;
   const mapUrl =
     p.lat && p.lng ? `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=17/${p.lat}/${p.lng}` : null;
@@ -520,6 +540,9 @@ function PlaceCard({ p, dim = false, compact = false }: { p: PublicPlace; dim?: 
               {p.phone && (
                 <a
                   href={`tel:${p.phone.replace(/\s/g, "")}`}
+                  data-track="call"
+                  data-result-id={p.id}
+                  data-rank={rank}
                   className="flex items-center gap-1.5 rounded-lg border border-line bg-ink px-2.5 py-1 text-[11.5px] font-medium text-paper transition-colors hover:border-jade/50 hover:text-jade"
                 >
                   <Phone className="size-3" /> {p.phone}
@@ -530,6 +553,9 @@ function PlaceCard({ p, dim = false, compact = false }: { p: PublicPlace; dim?: 
                   href={mapUrl}
                   target="_blank"
                   rel="noreferrer"
+                  data-track="map_open"
+                  data-result-id={p.id}
+                  data-rank={rank}
                   className="flex items-center gap-1.5 rounded-lg border border-line bg-ink px-2.5 py-1 text-[11.5px] font-medium text-paper transition-colors hover:border-gold/50 hover:text-gold"
                 >
                   <Navigation className="size-3" /> Bản đồ

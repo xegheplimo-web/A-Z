@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  *   { trace_id?, query, verdict: "good"|"bad"|"mixed", useful_place_ids?, comment? }
  */
 export async function POST(req: Request) {
-  const blocked = await gate(req);
+  const blocked = await gate(req, { skipAuth: true });
   if (blocked) return blocked;
   const body = await readJson(req);
   const query = String(body.query ?? "").trim().slice(0, 500);

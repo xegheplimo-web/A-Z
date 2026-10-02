@@ -51,13 +51,15 @@ function clientIp(req: Request): string {
 }
 
 /** Trả Response lỗi nếu bị chặn, hoặc null nếu cho qua. */
-export async function gate(req: Request): Promise<Response | null> {
+export async function gate(req: Request, opts?: { skipAuth?: boolean }): Promise<Response | null> {
   let subject = `ip:${clientIp(req)}`;
   let keyId: string | null = null;
   let limit = Math.max(1, Number(process.env.RATE_LIMIT_PER_MIN ?? 60));
   let quota: number | null = null;
 
-  if (await authEnabled()) {
+  // Telemetry surfaces (feedback, interactions) are browser-side and carry no
+  // Bearer key — skipAuth keeps IP rate-limiting without demanding one.
+  if (!opts?.skipAuth && (await authEnabled())) {
     const m = (req.headers.get("authorization") ?? "").match(/^Bearer\s+(.+)$/i);
     const token = m?.[1]?.trim();
     if (!token) return errorJson(401, "Thiếu Authorization: Bearer <api_key>", "authentication_error", { "www-authenticate": "Bearer" });

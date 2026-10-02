@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 import { db } from "@/db";
 import { searchTraces } from "@/db/schema";
+import { redactQuery } from "@/lib/telemetry";
 import { desc, sql } from "drizzle-orm";
 import type { RetrieveResult } from "@/core/contract";
 import type { AnswerResult } from "./answer";
@@ -32,6 +33,7 @@ export async function recordTrace(t: TraceInput): Promise<string | null> {
       .insert(searchTraces)
       .values({
         query: u.raw,
+        querySafe: redactQuery(u.raw),
         normalized: u.normalized,
         intent: u.intent,
         locationId: u.locations[0]?.id ?? null,

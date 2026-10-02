@@ -170,6 +170,8 @@ export const feedback = pgTable("feedback", {
 export const searchTraces = pgTable("search_traces", {
   id: uuid("id").defaultRandom().primaryKey(),
   query: text("query").notNull(),
+  /** dạng query đã lược PII (phone/email/mã dài) — tầng analytics dài hạn dùng cột này, không dùng `query` raw */
+  querySafe: text("query_safe"),
   normalized: text("normalized").notNull(),
   intent: text("intent").notNull(),
   locationId: text("location_id"),
@@ -188,6 +190,29 @@ export const searchTraces = pgTable("search_traces", {
   timingsMs: jsonb("timings_ms"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// Search Interactions — tín hiệu hành vi (impression/click/source/map/call/
+// reformulate). Không lưu IP, không lưu key; session_id là id tạm mỗi tab do
+// client tự sinh, đủ để phát hiện reformulation mà không tracking người dùng.
+// ---------------------------------------------------------------------------
+export const searchInteractions = pgTable(
+  "search_interactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    traceId: uuid("trace_id"), // search_id xuyên suốt — nullable, không FK cứng
+    sessionId: text("session_id"),
+    kind: text("kind").notNull(),
+    resultId: text("result_id"),
+    rank: integer("rank"),
+    meta: jsonb("meta"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (t) => [
+    index("search_interactions_trace_idx").on(t.traceId),
+    index("search_interactions_kind_idx").on(t.kind, t.createdAt),
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // Eval Runs — benchmark VietScope (tài sản đo lường chất lượng)
