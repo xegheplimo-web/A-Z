@@ -206,7 +206,7 @@ class UnifiedRetriever:
         extra = [
             ("sắt thép", ("sat", "sat thep")),
             ("tạp hóa", ("bach hoa", "tap hoa")),
-            ("nhà thuốc", ("nha thuoc", "hieu thuoc")),
+            ("nhà thuốc", ("nha thuoc", "hieu thuoc", "quay thuoc", "tiem thuoc")),
         ]
         for label, aliases in extra:
             if any(

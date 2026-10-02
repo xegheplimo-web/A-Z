@@ -495,3 +495,68 @@ class TestRichPromotion:
         # both candidates kept in provenance
         ratings = [r for r in store.provenance if r.field == "rating"]
         assert len(ratings) == 2 and sum(r.chosen for r in ratings) == 1
+
+
+class TestSpecialtyEvidencePromotion:
+    """P-DATA-1B — description/specialties/products/menu/cuisine must reach
+    field provenance so the strict specialty lanes (giò chả, sắt thép —
+    where the name is NOT evidence) can match on live data. These are
+    provenance-only fields: no canonical column exists, so they must not
+    leak into ``map_canonical`` output either."""
+
+    def test_specialty_fields_reach_provenance(self):
+        store = _run(
+            [
+                _staged(
+                    1,
+                    raw_payload={
+                        "description": "giò chả truyền thống làng nghề",
+                        "specialties": ["giò chả", "giò lụa"],
+                        "products": "giò lụa, chả quế",
+                        "menu": None,
+                        "cuisine": "đặc sản",
+                    },
+                )
+            ]
+        )
+        by_field = {r.field: r for r in store.provenance if r.chosen}
+        assert by_field["description"].value == "giò chả truyền thống làng nghề"
+        assert by_field["specialties"].value == ["giò chả", "giò lụa"]
+        assert by_field["products"].value == "giò lụa, chả quế"
+        assert "menu" not in by_field  # None is not promoted
+        assert by_field["cuisine"].value == "đặc sản"
+
+    def test_specialty_fields_not_canonical_columns(self):
+        store = _run(
+            [
+                _staged(
+                    1,
+                    raw_payload={
+                        "description": "giò chả",
+                        "specialties": ["giò chả"],
+                    },
+                )
+            ]
+        )
+        p = store.places[1]
+        assert not hasattr(p, "description")
+        # canonical_category stays the mapped bucket, not the payload text
+        assert p.canonical_category == "food"
+
+    def test_garbage_specialty_fields_dropped(self):
+        store = _run(
+            [
+                _staged(
+                    1,
+                    raw_payload={
+                        "description": 123,
+                        "specialties": "   ",
+                        "products": {},
+                    },
+                )
+            ]
+        )
+        fields = {r.field for r in store.provenance}
+        assert "description" not in fields
+        assert "specialties" not in fields
+        assert "products" not in fields

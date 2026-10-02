@@ -143,6 +143,17 @@ def _rich_fields(payload: Any) -> dict[str, Any]:
     images = _image_urls(payload)
     if images:
         out["images"] = images
+    # P-DATA-1B — specialty evidence: verbatim text fields the strict
+    # specialty lanes read back via field provenance. Strings pass as-is;
+    # lists keep only non-empty string members. Anything else drops.
+    for key in ("description", "specialties", "products", "menu", "cuisine"):
+        v = payload.get(key)
+        if isinstance(v, str) and v.strip():
+            out[key] = v.strip()
+        elif isinstance(v, list):
+            items = [s.strip() for s in v if isinstance(s, str) and s.strip()]
+            if items:
+                out[key] = items
     return out
 
 

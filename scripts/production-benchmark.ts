@@ -14,7 +14,7 @@ const cases = [
   { query: "quán cafe Yên Dũng Neo", specialty: "cà phê", aliases: ["cafe", "cà phê", "coffee"], categories: ["cafe", "coffee_shop"], areas: ["yên dũng", "yen dung", "neo"] },
   { query: "cửa hàng sắt Tân An", specialty: "sắt thép", aliases: ["sắt", "thép", "sat", "thep"], categories: ["vlxd", "hardware", "steel"], areas: ["tân an", "tan an"] },
   { query: "cửa hàng bách hóa Yên Dũng", specialty: "tạp hóa", aliases: ["bách hóa", "tạp hóa", "bach hoa", "tap hoa", "grocery"], categories: ["tap-hoa", "grocery", "convenience", "supermarket"], areas: ["yên dũng", "yen dung", "neo"] },
-  { query: "nhà thuốc gần Neo", specialty: "nhà thuốc", aliases: ["nhà thuốc", "hiệu thuốc", "nha thuoc", "pharmacy"], categories: ["nha-thuoc", "pharmacy"], areas: ["neo", "yên dũng", "yen dung"] },
+  { query: "nhà thuốc gần Neo", specialty: "nhà thuốc", aliases: ["nhà thuốc", "hiệu thuốc", "quầy thuốc", "tiệm thuốc", "nha thuoc", "pharmacy"], categories: ["nha-thuoc", "pharmacy"], areas: ["neo", "yên dũng", "yen dung"] },
 ];
 
 const fold = (value: unknown) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();

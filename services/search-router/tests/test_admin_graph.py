@@ -241,6 +241,35 @@ class TestHistoricalResolution:
         assert "old:24" in {u.key for u in hist.matched}
         assert "new:24" in {u.key for u in hist.provinces}
 
+    def test_neo_local_name_reaches_yen_dung_ward(self, resolver):
+        """'Neo' — the pre-2020 township absorbed into Nham Biền (NQ
+        727/NQ-UBTVQH14) — is the local name locals still use. It must
+        anchor to the current Phường Yên Dũng via the historical hop."""
+        for probe in ("Neo", "thị trấn Neo", "neo, Bắc Ninh"):
+            res = resolver.resolve(probe)
+            assert res.status == "resolved", probe
+            assert "new:07681" in {u.key for u in res.communes}, probe
+            assert "new:24" in {u.key for u in res.provinces}, probe
+        res = resolver.resolve("Neo")
+        assert "old:07681" in {u.key for u in res.matched}
+        assert any(
+            e.from_key == "old:07681" and e.to_key == "new:07681" for e in res.path
+        )
+
+    def test_neo_alias_on_current_ward_for_anchoring(self, seed):
+        """DB lookups (`services/admin.py`) skip units without geometry —
+        historical units can never anchor. 'Neo' must therefore also alias
+        the current ward so anchor services resolve it to live geography.
+        'alternate' (vernacular, still in use) rather than a second
+        'historical' alias keeps the historical unit's hit non-tied."""
+        neo_current = [
+            a
+            for a in seed["aliases"]
+            if a["normalized_alias"] == "neo" and a["unit_key"] == "new:07681"
+        ]
+        assert neo_current, "missing 'neo' alias on current ward"
+        assert neo_current[0]["alias_type"] == "alternate"
+
 
 # ── resolver: ambiguity ────────────────────────────────────────────────────────
 

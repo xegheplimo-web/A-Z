@@ -36,6 +36,16 @@ FIELDS = (
     "review_count",
     "price_level",
     "images",
+    # P-DATA-1B specialty evidence — provenance-only fields (no canonical
+    # column; map_canonical drops them). The strict specialty lanes read
+    # them back via get_place().provenance — without these, queries whose
+    # specialty must not trust the name alone (giò chả, sắt thép) can
+    # never match live data.
+    "description",
+    "specialties",
+    "products",
+    "menu",
+    "cuisine",
 )
 
 # Fallback when a provider has no source_policies row.
@@ -52,6 +62,11 @@ _DEFAULT_AUTHORITY = {
     "review_count": 0.5,
     "price_level": 0.5,
     "images": 0.5,
+    "description": 0.5,
+    "specialties": 0.5,
+    "products": 0.5,
+    "menu": 0.5,
+    "cuisine": 0.5,
 }
 
 # source_policies.authority uses business-facing keys; map them to fields.
@@ -68,6 +83,11 @@ _AUTHORITY_KEY = {
     "review_count": "review_count",
     "price_level": "price_level",
     "images": "images",
+    "description": "description",
+    "specialties": "specialties",
+    "products": "products",
+    "menu": "menu",
+    "cuisine": "cuisine",
 }
 
 # Per-field recency half-life in days: volatile fields decay fast,
