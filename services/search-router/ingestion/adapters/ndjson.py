@@ -17,7 +17,17 @@ One JSON object per line::
       "hours": {"Monday": ["07:00-17:00"]}  # dict, or a verbatim string
       "status": "OPERATIONAL",         # provider-reported status verbatim
       "lat": 21.207, "lon": 106.202,
-      "observed_at": "2026-10-02T09:00:00Z"  # optional; defaults to fetch time
+      "observed_at": "2026-10-02T09:00:00Z",  # optional; defaults to fetch time
+
+      # Optional manual-review evidence (P-DATA-1A). Every row is a raw
+      # observation by default; review_status='verified' is honored ONLY
+      # with the full evidence tuple — source_url + reviewed_at +
+      # verification_method — else the record is rejected to the DLQ
+      # (incomplete_review_evidence) rather than silently trusted.
+      "review_status": "verified",
+      "reviewed_by": "operator-1",
+      "reviewed_at": "2026-10-02T09:00:00Z",
+      "verification_method": "official_website"
     }
 
 Unknown keys are preserved verbatim inside ``raw_payload`` — the runner
@@ -100,6 +110,10 @@ def entry_to_record(
         raw_payload=obj,
         observed_at=_dt(obj.get("observed_at")) or fetched_at,
         fetched_at=fetched_at,
+        review_status=_s(obj.get("review_status")),
+        reviewed_by=_s(obj.get("reviewed_by")),
+        reviewed_at=_dt(obj.get("reviewed_at")),
+        verification_method=_s(obj.get("verification_method")),
     )
 
 

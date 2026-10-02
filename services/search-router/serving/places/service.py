@@ -204,6 +204,12 @@ def _strip_volatile(row: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in row.items() if k not in _VOLATILE_KEYS}
 
 
+def _doc_ts(doc: Any, attr: str) -> str | None:
+    """Optional V2 datetime attribute → ISO string (V1 docs lack it)."""
+    v = getattr(doc, attr, None)
+    return v.isoformat() if v is not None else None
+
+
 class PlaceService:
     """The P17 read path. Dependencies injectable for tests."""
 
@@ -579,6 +585,9 @@ class PlaceService:
             "freshness_score": doc.freshness_score,
             "distance_m": round(c.distance_m, 1) if c.distance_m is not None else None,
             "last_verified_at": doc.last_verified_at.isoformat() if doc.last_verified_at else None,
+            "last_seen": _doc_ts(doc, "last_seen"),
+            "verification_level": getattr(doc, "verification_level", None) or "observed",
+            "verification_method": getattr(doc, "verification_method", None),
             "aliases": doc.aliases,
             "rating": doc.rating,
             "review_count": doc.review_count,
@@ -639,6 +648,9 @@ class PlaceService:
             "freshness_score": doc.freshness_score,
             "distance_m": None,
             "last_verified_at": doc.last_verified_at.isoformat() if doc.last_verified_at else None,
+            "last_seen": _doc_ts(doc, "last_seen"),
+            "verification_level": getattr(doc, "verification_level", None) or "observed",
+            "verification_method": getattr(doc, "verification_method", None),
             "aliases": doc.aliases,
             "rating": doc.rating,
             "review_count": doc.review_count,

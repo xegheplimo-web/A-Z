@@ -1864,6 +1864,17 @@
             "title": "Images",
             "type": "array"
           },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
           "last_verified_at": {
             "anyOf": [
               {
@@ -2030,6 +2041,28 @@
             "title": "Status",
             "type": "string"
           },
+          "verification_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Level"
+          },
+          "verification_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Method"
+          },
           "website": {
             "anyOf": [
               {
@@ -2135,6 +2168,17 @@
             },
             "title": "Images",
             "type": "array"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
           },
           "last_verified_at": {
             "anyOf": [
@@ -2286,6 +2330,28 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "verification_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Level"
+          },
+          "verification_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Method"
           },
           "website": {
             "anyOf": [

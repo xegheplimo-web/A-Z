@@ -53,6 +53,15 @@ class RawPlaceRecord:
     observed_at: datetime | None = None  # when the provider truth held
     fetched_at: datetime | None = None  # when we pulled the bytes
 
+    # P-DATA-1A — operator review evidence (curated adapters only).
+    # review_status='verified' is a CLAIM: it is rejected at validation
+    # unless source_url + reviewed_at + verification_method are all
+    # present, so what reaches staging is substantiated.
+    review_status: str | None = None  # verified|rejected; NULL = unreviewed
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    verification_method: str | None = None
+
     def _hash(self, canon: dict[str, Any]) -> str:
         return hashlib.sha256(
             json.dumps(canon, sort_keys=True, ensure_ascii=False).encode("utf-8")

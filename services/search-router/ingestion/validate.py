@@ -19,6 +19,10 @@ _VN_LON_MAX_ISLANDS = 119.5  # Trường Sa / Hoàng Sa outposts
 
 _PHONE_DIGITS = re.compile(r"\D+")
 
+# Operator review vocabulary (P-DATA-1A). 'verified' elevates only with
+# the complete evidence tuple; 'rejected' is recorded for ops review.
+_REVIEW_STATUSES = frozenset({"verified", "rejected"})
+
 
 def normalize_phone(raw: str) -> str | None:
     """VN phone → canonical +84 form, digits preserved.
@@ -86,4 +90,14 @@ def validate(rec: RawPlaceRecord) -> list[str]:
         errs.append("implausible_phone")
     if rec.raw_website and canonical_website(rec.raw_website) is None:
         errs.append("malformed_website")
+    # P-DATA-1A — a verified claim must carry its evidence tuple.
+    # Reject loudly: silently downgrading would let an operator believe
+    # the review counted when it didn't.
+    if rec.review_status is not None:
+        if rec.review_status not in _REVIEW_STATUSES:
+            errs.append("invalid_review_status")
+        elif rec.review_status == "verified" and not (
+            rec.source_url and rec.reviewed_at and rec.verification_method
+        ):
+            errs.append("incomplete_review_evidence")
     return errs

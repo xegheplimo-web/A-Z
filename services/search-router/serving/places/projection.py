@@ -27,7 +27,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
-from serving.places.document import PLACE_STATUSES, PlaceDocumentV1
+from serving.places.document import PLACE_STATUSES, PlaceDocumentV1, PlaceDocumentV2
 
 # Recency half-life for the serving freshness score (days). Mirrors the
 # resolver's neutral field tau — a place observed today scores ~1.0, one
@@ -62,6 +62,11 @@ PLACE_COLS = (
     "price_level",
     "primary_image_url",
     "images",
+    # P-DATA-1A verification columns (migration 017) — verified_at is the
+    # real timestamp; last_seen (above) stays an observation marker.
+    "verified_at",
+    "verification_level",
+    "verification_method",
 )
 
 _PLACE_COLS_SQL = ", ".join(PLACE_COLS)
@@ -183,14 +188,14 @@ def project_row(
     *,
     alias_names: Iterable[str | None] = (),
     now: datetime | None = None,
-) -> PlaceDocumentV1:
+) -> PlaceDocumentV2:
     """Map one ``canonical_places`` row (+ source name variants) → document."""
     status = row.get("status") or "unknown"
     if status not in PLACE_STATUSES:
         status = "unknown"
     phone = row.get("phone")
     images = _jsonb_list(row.get("images"))
-    return PlaceDocumentV1(
+    return PlaceDocumentV2(
         place_id=str(row["place_id"]),
         business_id=str(row["business_id"]) if row.get("business_id") is not None else None,
         name=row.get("canonical_name") or "",
@@ -218,7 +223,13 @@ def project_row(
         primary_image_url=row.get("primary_image_url") or (images[0] if images else None),
         images=images,
         source_count=int(row.get("source_count") or 0),
-        last_verified_at=row.get("last_seen"),
+        # P-DATA-1A: verified_at is the real verification stamp; it is
+        # NULL unless the row earned verification_level >= corroborated.
+        # last_seen stays a sighting timestamp — never a proxy again.
+        last_verified_at=row.get("verified_at"),
+        last_seen=row.get("last_seen"),
+        verification_level=row.get("verification_level") or "observed",
+        verification_method=row.get("verification_method"),
     )
 
 
@@ -227,7 +238,7 @@ def project_rows(
     *,
     aliases_by_place: dict[int, list[str]] | None = None,
     now: datetime | None = None,
-) -> list[PlaceDocumentV1]:
+) -> list[PlaceDocumentV2]:
     return [
         project_row(r, alias_names=(aliases_by_place or {}).get(r["place_id"], ()), now=now)
         for r in rows
@@ -244,18 +255,25 @@ def doc_to_index_source(doc: PlaceDocumentV1) -> dict[str, Any]:
     return data
 
 
-def doc_from_index_source(src: dict[str, Any]) -> PlaceDocumentV1:
-    """OpenSearch ``_source`` → document (tolerates the extra geo field)."""
+def doc_from_index_source(src: dict[str, Any]) -> PlaceDocumentV2:
+    """OpenSearch ``_source`` → document (tolerates the extra geo field).
+
+    V1 index docs deserialize as V2 with observed defaults — a doc whose
+    ``last_verified_at`` was written by the pre-P-DATA-1A last_seen alias
+    keeps the timestamp but reports ``verification_level='observed'``,
+    so the retrieve gate no longer trusts it.
+    """
     src = dict(src)
     src.pop("location", None)
     src.pop("document_version", None)
-    lv = src.get("last_verified_at")
-    if isinstance(lv, str):
-        try:
-            src["last_verified_at"] = datetime.fromisoformat(lv)
-        except ValueError:
-            src["last_verified_at"] = None
-    return PlaceDocumentV1(**{k: v for k, v in src.items() if k in _DOC_FIELDS})
+    for key in ("last_verified_at", "last_seen"):
+        v = src.get(key)
+        if isinstance(v, str):
+            try:
+                src[key] = datetime.fromisoformat(v)
+            except ValueError:
+                src[key] = None
+    return PlaceDocumentV2(**{k: v for k, v in src.items() if k in _DOC_FIELDS})
 
 
-_DOC_FIELDS = frozenset(PlaceDocumentV1.__dataclass_fields__)
+_DOC_FIELDS = frozenset(PlaceDocumentV2.__dataclass_fields__)

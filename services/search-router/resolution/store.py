@@ -48,6 +48,12 @@ class PlaceRow:
     price_level: str | None = None
     primary_image_url: str | None = None
     images: list[str] | None = None
+    # P-DATA-1A verification columns — separate from first_seen/last_seen
+    # observation timestamps; level ladder in resolution.verification.
+    last_seen: Any = None
+    verified_at: Any = None
+    verification_level: str = "observed"
+    verification_method: str | None = None
 
     def as_norm(self) -> PlaceNorm:
         return PlaceNorm(
@@ -364,6 +370,10 @@ _PLACE_COLS = (
     "price_level",
     "primary_image_url",
     "images",
+    "last_seen",
+    "verified_at",
+    "verification_level",
+    "verification_method",
 )
 
 
@@ -404,6 +414,10 @@ class PgCanonicalStore:
             price_level=r["price_level"],
             primary_image_url=r["primary_image_url"],
             images=_jsonb_list(r["images"]),
+            last_seen=r.get("last_seen"),
+            verified_at=r.get("verified_at"),
+            verification_level=r.get("verification_level") or "observed",
+            verification_method=r.get("verification_method"),
         )
 
     async def candidates(self, src: NormSource) -> list[PlaceRow]:
@@ -575,6 +589,9 @@ class PgCanonicalStore:
             "price_level",
             "primary_image_url",
             "images",
+            "verified_at",
+            "verification_level",
+            "verification_method",
         }
         for k, v in fields.items():
             if k not in allowed:
@@ -694,7 +711,9 @@ class PgCanonicalStore:
             """SELECT s.source_record_id AS id, r.provider, r.external_id,
                       r.raw_name, r.raw_address, r.raw_phone, r.raw_website,
                       r.raw_category, r.raw_hours, r.raw_status, r.lat, r.lon,
-                      r.admin_unit_id, r.observed_at, r.raw_payload
+                      r.admin_unit_id, r.observed_at, r.raw_payload,
+                      r.source_url, r.review_status, r.reviewed_at,
+                      r.verification_method
                FROM place_sources s
                JOIN place_source_records r ON r.id = s.source_record_id
                WHERE s.place_id = $1""",

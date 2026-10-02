@@ -30,6 +30,11 @@ def plain(value: Any) -> Any:
     return value
 
 
+# P-DATA-1A — canonical verification levels that may gate an exact
+# local result; 'observed' (single fresh source) never qualifies.
+_VERIFIED_LEVELS = frozenset({"corroborated", "verified", "authoritative"})
+
+
 def distance_km(a: dict, b: dict) -> float | None:
     if any(v is None for v in (a.get("lat"), a.get("lng"), b.get("lat"), b.get("lon"))):
         return None
@@ -369,8 +374,15 @@ class UnifiedRetriever:
                     specialty is not None
                     and category in allowed_category.get(specialty, set())
                 )
+                # P-DATA-1A — exact requires EARNED verification: the
+                # level ladder (corroborated|verified|authoritative) plus
+                # a real verified_at stamp. Freshness + default-authority
+                # confidence can no longer verify a single-source place.
+                verification_level = row.get("verification_level") or "observed"
+                verification_method = row.get("verification_method")
                 verified = (
-                    bool(row.get("last_verified_at"))
+                    verification_level in _VERIFIED_LEVELS
+                    and bool(row.get("last_verified_at"))
                     and float(row.get("confidence") or 0) >= 0.7
                 )
                 p = {
@@ -397,11 +409,20 @@ class UnifiedRetriever:
                     "lat": row.get("lat"),
                     "lng": row.get("lon"),
                     "updated_at": row.get("last_verified_at"),
-                    "why": [
-                        "specialty evidence"
-                        if matched_specialty
-                        else "related category"
-                    ],
+                    "why": (
+                        [
+                            "specialty evidence"
+                            if matched_specialty
+                            else "related category",
+                            f"verified:{verification_method or verification_level}",
+                        ]
+                        if verified
+                        else [
+                            "specialty evidence"
+                            if matched_specialty
+                            else "related category"
+                        ]
+                    ),
                 }
                 (
                     exact

@@ -24,7 +24,7 @@ Các thay đổi của bản port:
 | Own index | `_hybrid_retrieve` → OpenSearch / Qdrant / RRF |
 | Fusion / rank / reader | bounded URL identity fusion → `_rank` top-30 → `_fetch_top` tối đa 7 nguồn |
 
-Strict local: đúng scope + evidence chuyên ngành + `last_verified_at` + confidence ≥0.7 mới vào exact. Không biến category `restaurant` thành bằng chứng giò chả, không biến web snippet thành canonical place. Nếu không resolve được scope, không tự nhận exact.
+Strict local: đúng scope + evidence chuyên ngành + `verification_level` ≥ `corroborated` (≥2 nguồn độc lập, review đủ evidence, hoặc nguồn first-party) + confidence ≥0.7 mới vào exact. `last_seen` chỉ là timestamp quan sát — không còn được đọc như `verified_at`. Không biến category `restaurant` thành bằng chứng giò chả, không biến web snippet thành canonical place. Nếu không resolve được scope, không tự nhận exact.
 
 FAST local đủ 2 exact thì dừng trước live providers. Nếu thiếu, gọi live web + own index cùng deadline. Timeout/lỗi dịch vụ hiện rõ trong `federation`. Query không-local không gọi Places. Endpoint này chỉ retrieve; `vietscope-1` synthesis vẫn nằm ở facade.
 

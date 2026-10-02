@@ -107,6 +107,9 @@
       "website_domain": { "type": "keyword" },
       "opening_hours": { "type": "object", "enabled": false },
       "last_verified_at": { "type": "date" },
+      "last_seen": { "type": "date" },
+      "verification_level": { "type": "keyword" },
+      "verification_method": { "type": "keyword" },
       "location": { "type": "geo_point" }
     }
   }

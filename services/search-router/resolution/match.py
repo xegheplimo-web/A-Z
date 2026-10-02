@@ -95,6 +95,13 @@ class NormSource:
     admin_unit_id: int | None
     observed_at: Any
     fields: dict[str, Any]  # {field: value} for provenance writes
+    # P-DATA-1A — operator-review evidence + the observation's own URL.
+    # Fed from staged columns by runner._contrib; verification decisions
+    # live in resolution.verification (completeness re-checked there).
+    source_url: str | None = None
+    review_status: str | None = None
+    reviewed_at: Any = None
+    verification_method: str | None = None
 
 
 @dataclass

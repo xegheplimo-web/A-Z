@@ -58,6 +58,8 @@ class Services:
                 "specialties": ["giò chả"] if name.startswith("Giò chả") else [],
                 "confidence": 0.9,
                 "last_verified_at": "2026-01-01T00:00:00Z" if verified else None,
+                "verification_level": "corroborated" if verified else "observed",
+                "verification_method": "multi_source" if verified else None,
             }
 
         return [

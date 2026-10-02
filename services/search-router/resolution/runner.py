@@ -30,6 +30,7 @@ from resolution.normalize import (
     website_domain,
 )
 from resolution.provenance import confidence_from, map_canonical, resolve_fields
+from resolution.verification import _as_dt, verification_for
 from resolution.store import CanonicalStore, DictCanonicalStore, PgCanonicalStore
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,8 @@ logger = logging.getLogger(__name__)
 _PAGE_SQL = """
 SELECT id, provider, external_id, raw_name, raw_address, raw_phone,
        raw_website, raw_category, raw_hours, raw_status, lat, lon,
-       admin_unit_id, observed_at, raw_payload
+       admin_unit_id, observed_at, raw_payload,
+       source_url, review_status, reviewed_at, verification_method
 FROM place_source_records
 WHERE id > $1 AND record_status = 'valid'
 ORDER BY id
@@ -198,6 +200,10 @@ def _contrib(
         admin_unit_id=row.get("admin_unit_id"),
         observed_at=row.get("observed_at"),
         fields=fields,
+        source_url=row.get("source_url"),
+        review_status=row.get("review_status"),
+        reviewed_at=row.get("reviewed_at"),
+        verification_method=row.get("verification_method"),
     )
 
 
@@ -236,6 +242,11 @@ async def _apply(
     fields, prov = resolve_fields(place_id, contribs, policies)
     canonical = map_canonical(fields)
     providers = {c.provider for c in contribs}
+    v_level, v_method, verified_at = verification_for(contribs, policies)
+    last_seen = max(
+        (t for t in (_as_dt(c.observed_at) for c in contribs) if t is not None),
+        default=None,
+    )
     updates = {
         **canonical,
         "normalized_name": norm_name(canonical.get("canonical_name", "")),
@@ -243,6 +254,13 @@ async def _apply(
         "confidence": confidence_from(prov),
         "source_count": len(providers),
         "resolution_run_id": run_id,
+        # P-DATA-1A — observation and verification stay separate:
+        # last_seen tracks the latest sighting; verified_at only exists
+        # when the evidence earned level >= corroborated.
+        "last_seen": last_seen,
+        "verified_at": verified_at,
+        "verification_level": v_level,
+        "verification_method": v_method,
     }
     if "website" in canonical:
         updates["website_domain"] = website_domain(canonical["website"])

@@ -27,8 +27,10 @@ Column mapping (canonical_places → document):
   may be empty.
 - ``freshness_score``: derived at projection time (not stored canonical) —
   recency decay over ``last_seen`` / provenance ``observed_at``.
-- ``last_verified_at`` ← ``last_seen`` (most recent corroborating
-  observation).
+- ``last_verified_at`` ← ``verified_at`` (P-DATA-1A): set only when the
+  canonical row actually earned ``verification_level >= corroborated``.
+  ``last_seen`` surfaces separately — it is a sighting timestamp, never
+  a verification claim.
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ from datetime import datetime
 from typing import Any
 
 PLACE_DOCUMENT_VERSION = 1
+PLACE_DOCUMENT_VERSION_V2 = 2  # current produced version (P-DATA-1A)
 
 # Canonical operational status values (P16.1 — normalized from provider
 # vocabularies at resolution time; see resolution/normalize.py).
@@ -115,4 +118,37 @@ class PlaceDocumentV1:
         data["document_version"] = PLACE_DOCUMENT_VERSION
         if self.last_verified_at is not None:
             data["last_verified_at"] = self.last_verified_at.isoformat()
+        return data
+
+
+@dataclass(slots=True)
+class PlaceDocumentV2(PlaceDocumentV1):
+    """V1 + honest verification state (P-DATA-1A).
+
+    Canonical ``verified_at`` / ``verification_level`` /
+    ``verification_method`` surfaced per the V1 contract's versioning
+    rule: new canonical fields arrive as a new document version, not a
+    silent V1 mutation. ``last_seen`` is exposed as its own field so the
+    observation timestamp is no longer overloaded as verification.
+
+    Old V1 index sources deserialize into V2 with observed defaults —
+    they lose the inflated ``last_verified_at`` alias at read time, which
+    is exactly the point of the hardening.
+    """
+
+    last_seen: datetime | None = None
+    verification_level: str = "observed"  # observed|corroborated|verified|authoritative
+    verification_method: str | None = None
+
+    @property
+    def document_version(self) -> int:
+        return PLACE_DOCUMENT_VERSION_V2
+
+    def to_dict(self) -> dict[str, Any]:
+        # Explicit base call — zero-arg super() breaks under slots=True
+        # dataclass inheritance (the __class__ cell binds pre-slots).
+        data = PlaceDocumentV1.to_dict(self)
+        data["document_version"] = PLACE_DOCUMENT_VERSION_V2
+        if self.last_seen is not None:
+            data["last_seen"] = self.last_seen.isoformat()
         return data

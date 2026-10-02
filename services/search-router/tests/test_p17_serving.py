@@ -451,7 +451,13 @@ class TestQueryParsing:
 class TestProjection:
     def test_row_to_document(self):
         doc = project_row(
-            _row(7, canonical_category="food", status="closed_garbage"),
+            _row(
+                7,
+                canonical_category="food",
+                status="closed_garbage",
+                verified_at=NOW,
+                verification_level="corroborated",
+            ),
             alias_names=["Phở Bảy", "Nhà thuốc P17 7", "PHỞ BẢY"],
             now=NOW,
         )

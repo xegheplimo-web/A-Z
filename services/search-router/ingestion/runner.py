@@ -68,6 +68,10 @@ _RECORD_COLS = [
     "identity_hash",
     "observation_hash",
     "record_status",
+    "review_status",
+    "reviewed_by",
+    "reviewed_at",
+    "verification_method",
 ]
 
 _STAGE_COLS = [*_RECORD_COLS, "change_type"]
@@ -89,6 +93,7 @@ _CAST = {
     "ingestion_run_id": "::bigint",
     "admin_unit_id": "::bigint",
     "resolution_confidence": "::real",
+    "reviewed_at": "::timestamptz",
 }
 
 # Static column lists — no user input reaches these statements.
@@ -209,6 +214,10 @@ def _row_dict(
         "identity_hash": rec.identity_hash(),
         "observation_hash": obs_hash,
         "record_status": "valid",
+        "review_status": rec.review_status,
+        "reviewed_by": rec.reviewed_by,
+        "reviewed_at": rec.reviewed_at.isoformat() if rec.reviewed_at else None,
+        "verification_method": rec.verification_method,
         "change_type": None,
     }
 

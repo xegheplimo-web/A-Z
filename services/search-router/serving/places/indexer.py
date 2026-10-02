@@ -29,7 +29,7 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from serving.places.cache import PlaceCache
-from serving.places.document import PLACE_DOCUMENT_VERSION, PlaceDocumentV1
+from serving.places.document import PLACE_DOCUMENT_VERSION_V2, PlaceDocumentV2
 from serving.places.os_index import PlaceIndexUnavailable, PlaceOSIndex
 from serving.places.projection import (
     ALIASES_SQL,
@@ -134,7 +134,7 @@ class PgIndexState:
         self._name = index_name
 
     async def _ensure_row(self) -> None:
-        await self._pool.execute(_STATE_UPSERT, self._name, PLACE_DOCUMENT_VERSION)
+        await self._pool.execute(_STATE_UPSERT, self._name, PLACE_DOCUMENT_VERSION_V2)
 
     async def load(self) -> dict[str, Any] | None:
         await self._ensure_row()
@@ -217,7 +217,7 @@ class PlaceIndexer:
                 out.setdefault(int(pid), []).append(name)
         return out
 
-    async def _project_page(self, rows: list[dict[str, Any]]) -> list[PlaceDocumentV1]:
+    async def _project_page(self, rows: list[dict[str, Any]]) -> list[PlaceDocumentV2]:
         aliases = await self._aliases([int(r["place_id"]) for r in rows])
         return project_rows(rows, aliases_by_place=aliases)
 

@@ -1919,6 +1919,11 @@ class PlaceOut(BaseModel):
     distance_m: float | None = None
     freshness_score: float = 0.0
     last_verified_at: str | None = None
+    # P-DATA-1A verification transparency — observation vs verification
+    # stay distinct; last_seen alone never implies verified.
+    last_seen: str | None = None
+    verification_level: str | None = None
+    verification_method: str | None = None
     aliases: list[str] = Field(default_factory=list)
     score_debug: dict | None = None
     # P2.0 rich place-card fields — promoted from source raw_payload at

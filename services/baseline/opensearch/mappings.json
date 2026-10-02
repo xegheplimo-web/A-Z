@@ -35,6 +35,9 @@
           "index": false,
           "type": "keyword"
         },
+        "last_seen": {
+          "type": "date"
+        },
         "last_verified_at": {
           "type": "date"
         },
@@ -98,6 +101,12 @@
           "type": "integer"
         },
         "status": {
+          "type": "keyword"
+        },
+        "verification_level": {
+          "type": "keyword"
+        },
+        "verification_method": {
           "type": "keyword"
         },
         "website": {

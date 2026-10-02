@@ -21,6 +21,38 @@ under `--gate` (precision@10 ≥ 0.80, generic noise < 10%, outside-area
 | Serving (P17) | `scripts/index_places.py` → OpenSearch `places` index; `PlaceService` falls back to PostGIS when the index is empty |
 | Quality gate | `npm run benchmark:production -- --gate` |
 
+## P-DATA-1A — verification semantics (done)
+
+`first_seen`/`last_seen` are *observation* timestamps; `verified_at` +
+`verification_level` + `verification_method` are the trust signal. The
+two never alias. Level ladder (weakest → strongest):
+
+- `observed` — single provider, no review. Default for all raw records.
+- `corroborated` — ≥2 distinct providers (`source_count`, not records).
+- `verified` — operator review with the **complete evidence tuple**:
+  `review_status="verified"` + `source_url` + `reviewed_at` +
+  `verification_method` (`reviewed_by` optional provenance).
+- `authoritative` — contributor from a `source_policies.kind='authority'`
+  provider (first-party truth).
+
+`verified_at` is the timestamp of the qualifying evidence (`reviewed_at`
+for reviews, latest contributing `observed_at` otherwise) — deterministic,
+never wall-clock. A place lands in `exact` only when
+`verification_level ≥ corroborated` **and** `verified_at` **and**
+`confidence ≥ 0.7`. A fresh single-source row stays `unverified` no
+matter how high its resolution confidence.
+
+Reviewed NDJSON rows carry the tuple inline; `review_status="verified"`
+with missing evidence is rejected to the DLQ as
+`incomplete_review_evidence` rather than silently trusted:
+
+```json
+{"name": "...", "external_id": "...", "source_url": "...",
+ "review_status": "verified", "reviewed_by": "operator-1",
+ "reviewed_at": "2026-10-02T10:00:00Z",
+ "verification_method": "official_website"}
+```
+
 ## Ops flow
 
 ```bash
@@ -61,8 +93,10 @@ SEARCH_ROUTER_URL=http://127.0.0.1:8888 \
 BENCH_RUNS=10 npm run benchmark:production -- --gate
 ```
 
-The `data-ops` profile is a manual shell over the same image — it starts
-`search-db`/`opensearch` transitively and exits after each command.
+The `data-ops` profile is a manual shell over the same image — it runs
+`search-seed` first (migrations + admin graph) and starts
+`search-db`/`opensearch` transitively, so it is self-sufficient on a
+fresh database, and exits after each command.
 Run it on the host instead when iterating: `uv run python -m scripts.ingest ...`
 inside `services/search-router` with `HUB_DATABASE_URL` set.
 
