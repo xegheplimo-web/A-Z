@@ -63,7 +63,7 @@ async function main() {
 
     // 3) local thiếu canonical → widening sang hub → RRF dedup → flywheel staging
     await db.delete(placeCandidates).where(like(placeCandidates.sourceUrl, "%bacninh.gov.vn/du-lich%"));
-    const thin = await runPipeline("giò chả ở Hải Dương", { log: false }); // Hải Dương đã sáp nhập vào Hải Phòng; chưa có giò chả canonical ở đó
+    const thin = await runPipeline("giò chả ở Hải Dương"); // Hải Dương đã sáp nhập vào Hải Phòng; chưa có giò chả canonical ở đó — cần record để flywheel staging chạy
     const st = await mockState();
     check("widening → gọi hub", st.hubCalls > after && thin.widening.some((w) => w.includes("mở rộng sang web")), thin.widening.join(" / "));
     check("hub nhận query đã thêm địa giới mới (Hải Dương → Hải Phòng)", /Hải Phòng/.test(st.lastHubBody?.query ?? ""), st.lastHubBody?.query);

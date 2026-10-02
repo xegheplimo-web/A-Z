@@ -129,7 +129,7 @@ jobs:
             -d '{"query":"quán giò chả ngon ở Yên Dũng"}' | grep -q "results" || exit 1
 
           # Places search
-          curl -sf "http://localhost:3000/v1/places/search?query=Yên Dũng" | grep -q "places" || exit 1
+          curl -sf "http://localhost:3000/v1/places/search?q=Yên%20Dũng" | grep -q "places" || exit 1
 
           # Providers
           curl -sf http://localhost:3000/v1/providers | grep -q "providers" || exit 1
