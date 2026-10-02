@@ -7,6 +7,8 @@ RUN npm ci || npm install
 # ---- builder ----
 FROM node:22-alpine AS builder
 WORKDIR /app
+ARG DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/app_db
+ENV DATABASE_URL=$DATABASE_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
