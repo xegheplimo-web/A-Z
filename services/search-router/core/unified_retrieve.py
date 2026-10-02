@@ -16,6 +16,7 @@ import time
 from typing import Any, cast
 from urllib.parse import urlsplit
 
+from core.coverage import record_coverage
 from core.entity_resolver import fold
 from core.local_discovery import extract_specialty, locality_of
 
@@ -538,7 +539,7 @@ class UnifiedRetriever:
             else None
         )
         elapsed = (time.monotonic() - started) * 1000
-        return {
+        result = {
             "contract_version": "1",
             "backend": "search-router",
             "understanding": {
@@ -629,3 +630,8 @@ class UnifiedRetriever:
                 "understand_ms": 0,
             },
         }
+        # P-LEARNING-3 — production coverage persistence: demand × gap folds
+        # into coverage_signals inside this brain (facade stays read-only on
+        # retrieval data). Best-effort, awaited (~1 upsert, negligible).
+        await record_coverage(result)
+        return result

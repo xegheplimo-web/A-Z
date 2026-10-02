@@ -104,8 +104,15 @@ async function describe(): Promise<BackendDescription> {
 
 export const searchRouterBackend: RetrievalBackend = {
   id: "search-router",
-  capabilities: { coverage: false, adminResolve: true, stats: false },
+  capabilities: { coverage: true, adminResolve: true, stats: false },
   retrieve,
+  /** Coverage signals sống trong retrieval brain (P-LEARNING-3) — facade chỉ đọc qua API, không ghi DB. */
+  async coverage(limit: number) {
+    const c = cfg();
+    const r = await fetch(`${c.url}/v1/coverage/gaps?limit=${limit}`, { headers: headers(c.key), signal: AbortSignal.timeout(c.timeoutMs), cache: "no-store" });
+    if (!r.ok) throw new BackendUnavailableError(`search-router /v1/coverage/gaps lỗi HTTP ${r.status}`);
+    return { gaps: await r.json() };
+  },
   describe,
   /** search-router đã có GET /v1/admin/resolve?q= — chuyển tiếp nguyên văn */
   async adminResolve(q: string) {

@@ -47,6 +47,10 @@ export async function authEnabled(): Promise<boolean> {
 }
 
 function clientIp(req: Request): string {
+  // Chỉ tin X-Forwarded-For sau reverse proxy mình kiểm soát (proxy phải
+  // overwrite header, không forward nguyên xi của client — nếu không client
+  // có thể giả IP để bypass rate limit). Chưa cấu hình → bucket "anon" chung.
+  if (process.env.TRUST_PROXY_HEADERS !== "true") return "anon";
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
 }
 

@@ -15,6 +15,10 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
 
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field, model_validator
+
 from agent.orchestrator import run_research
 from config import settings
 from core.budget import SearchBudget
@@ -37,8 +41,6 @@ from evidence.citation import build_passages
 from evidence.claims import Claim, extract_claims_with_llm, keywords
 from evidence.pack import build_evidence_pack
 from evidence.verifier import verify_claims
-from fastapi import APIRouter, Depends, Request, Response
-from fastapi.responses import StreamingResponse
 from models import (
     BusinessEntity,
     CapabilitiesResponse,
@@ -50,16 +52,6 @@ from models import (
     Source,
     VerdictStatus,
 )
-from pipeline.rag import stream_research_answer, synthesize_research_answer
-from providers.searxng import MIN_RESULTS_BEFORE_WIDENING
-from pydantic import BaseModel, Field, model_validator
-from research_models.research_state import ResearchContext
-from security.apikeys import require_api_key
-from services.admin import admin_anchor
-from services.geo import GeoPoint, geocode, overpass_amenities
-from services.geo_postgis import osm_pois_nearby
-from storage.business_store import BusinessStore
-
 from observability.prometheus import (
     observe_degraded,
     observe_local_candidates,
@@ -67,6 +59,14 @@ from observability.prometheus import (
     observe_local_widen,
     observe_search,
 )
+from pipeline.rag import stream_research_answer, synthesize_research_answer
+from providers.searxng import MIN_RESULTS_BEFORE_WIDENING
+from research_models.research_state import ResearchContext
+from security.apikeys import require_api_key
+from services.admin import admin_anchor
+from services.geo import GeoPoint, geocode, overpass_amenities
+from services.geo_postgis import osm_pois_nearby
+from storage.business_store import BusinessStore
 
 if TYPE_CHECKING:
     from pipeline.federated_retrieval import FederatedResult
@@ -1766,6 +1766,7 @@ async def ingest_provider(provider: str, req: IngestRequest):
     import json as _json
 
     from fastapi import HTTPException
+
     from ingestion.adapters.gmaps import GoogleMapsAdapter
     from ingestion.adapters.web_corpus import WebCorpusAdapter
     from ingestion.runner import run_ingestion
@@ -1843,6 +1844,43 @@ async def ingest_runs(limit: int = 50):
             cursor=r["cursor"],
             error_summary=r["error_summary"] or {},
         )
+        for r in rows
+    ]
+
+
+@router.get("/coverage/gaps")
+async def coverage_gaps(limit: int = 25):
+    """Coverage demand signals (P-LEARNING-3) — cells ordered by demand.
+
+    Aggregate counts only; no query text is stored here by design.
+    """
+    from storage import pg_client
+
+    pool = await pg_client.get_pool()
+    if pool is None:
+        return []
+    rows = await pool.fetch(
+        """
+        SELECT cell_key, admin_id, category, specialty, week,
+               demand, zero_result, low_result, last_seen_at
+          FROM coverage_signals
+         ORDER BY demand DESC, last_seen_at DESC
+         LIMIT $1
+        """,
+        min(max(1, limit), 200),
+    )
+    return [
+        {
+            "cell": r["cell_key"],
+            "admin_id": r["admin_id"],
+            "category": r["category"],
+            "specialty": r["specialty"],
+            "week": r["week"],
+            "demand": r["demand"],
+            "zero_result": r["zero_result"],
+            "low_result": r["low_result"],
+            "last_seen_at": r["last_seen_at"].isoformat() if r["last_seen_at"] else None,
+        }
         for r in rows
     ]
 

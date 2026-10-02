@@ -4069,6 +4069,48 @@
         ]
       }
     },
+    "/v1/coverage/gaps": {
+      "get": {
+        "description": "Coverage demand signals (P-LEARNING-3) \u2014 cells ordered by demand.\n\nAggregate counts only; no query text is stored here by design.",
+        "operationId": "coverage_gaps_v1_coverage_gaps_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Coverage Gaps",
+        "tags": [
+          "v1"
+        ]
+      }
+    },
     "/v1/evidence": {
       "post": {
         "description": "POST /v1/evidence \u2014 structured sources \u2192 reranked cited passages.\n\nEach source is read through the tiered, SSRF-guarded reader\n(``pipeline.reader`` \u2192 ``crawler.netguard``), chunked and reranked by\nthe shared ``pipeline.passage_reranker`` \u2014 the same evidence path the\nresearch pipeline uses, not a parallel implementation. Search-side\nprovenance (``source_id``/``canonical_url``/``published_at``/\n``search_provider``) is echoed back on every item so citations map\nclaim \u2192 passage_id \u2192 source_id \u2192 URL. Backed by\n``pipeline.evidence_fetch.build_evidence``.",

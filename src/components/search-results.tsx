@@ -285,6 +285,7 @@ export function SearchResults({ data }: { data: VietScopeResponse }) {
                       href={w.url}
                       target="_blank"
                       rel="noreferrer"
+                      data-imp
                       data-track="click"
                       data-result-id={w.url}
                       data-rank={impressionList.length + i + 1}
@@ -471,6 +472,9 @@ function PlaceCard({ p, dim = false, compact = false, rank }: { p: PublicPlace; 
     p.lat && p.lng ? `https://www.openstreetmap.org/?mlat=${p.lat}&mlon=${p.lng}#map=17/${p.lat}/${p.lng}` : null;
   return (
     <div
+      data-imp
+      data-result-id={p.id}
+      data-rank={rank}
       className={`group relative overflow-hidden rounded-2xl border transition-all ${
         dim ? "border-line/70 bg-ink-2/40" : "border-line bg-ink-2/70 hover:border-gold/35"
       }`}

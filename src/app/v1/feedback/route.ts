@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { feedback } from "@/db/schema";
 import { gate } from "@/lib/auth";
 import { readJson, badRequest } from "@/lib/http";
+import { redactText, UUID_RE } from "@/lib/telemetry";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,11 +24,12 @@ export async function POST(req: Request) {
   const [row] = await db
     .insert(feedback)
     .values({
-      traceId: typeof body.trace_id === "string" ? body.trace_id : null,
-      query,
+      traceId: typeof body.trace_id === "string" && UUID_RE.test(body.trace_id) ? body.trace_id : null,
+      // feedback là dữ liệu giữ lâu → lược PII ngay tại điểm ghi
+      query: redactText(query, 500),
       verdict,
       usefulPlaceIds: useful,
-      comment: typeof body.comment === "string" ? body.comment.slice(0, 1000) : null,
+      comment: typeof body.comment === "string" ? redactText(body.comment, 1000) : null,
     })
     .returning({ id: feedback.id });
   return Response.json({ ok: true, id: row.id, verdict, query });

@@ -11,7 +11,8 @@
     "test:conformance": "tsx scripts/conformance.ts",
     "test:conformance:production": "tsx scripts/production-conformance.ts",
     "test:e2e:production": "node scripts/production-e2e.mjs",
-    "benchmark:production": "tsx scripts/production-benchmark.ts"
+    "benchmark:production": "tsx scripts/production-benchmark.ts",
+    "telemetry:retention": "tsx scripts/telemetry-retention.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

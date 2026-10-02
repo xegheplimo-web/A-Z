@@ -5,9 +5,9 @@
 // candidates → reranking → evidence → final answer → citations → verification.
 // ---------------------------------------------------------------------------
 import { db } from "@/db";
-import { searchTraces } from "@/db/schema";
+import { feedback, searchTraces } from "@/db/schema";
 import { redactQuery } from "@/lib/telemetry";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type { RetrieveResult } from "@/core/contract";
 import type { AnswerResult } from "./answer";
 import type { Verification } from "./evidence";
@@ -138,6 +138,16 @@ export async function traceStats() {
 
 /** Xuất vết để dựng dataset huấn luyện VietScope-LM (§11) */
 export async function exportTraces(limit = 100, onlyWithFeedback = false) {
-  const rows = await db.select().from(searchTraces).orderBy(desc(searchTraces.createdAt)).limit(Math.min(500, limit));
-  return onlyWithFeedback ? rows.filter((r) => r.trace != null) : rows;
+  const cap = Math.min(500, limit);
+  if (onlyWithFeedback) {
+    // join thật với feedback — trace JSONB tồn tại ≠ có nhãn người dùng
+    const rows = await db
+      .select({ t: searchTraces })
+      .from(searchTraces)
+      .innerJoin(feedback, eq(feedback.traceId, searchTraces.id))
+      .orderBy(desc(searchTraces.createdAt))
+      .limit(cap);
+    return rows.map((r) => r.t);
+  }
+  return db.select().from(searchTraces).orderBy(desc(searchTraces.createdAt)).limit(cap);
 }
