@@ -10,10 +10,11 @@ venv
 .env.*
 
 # Tests/docs/eval run on the host or in CI — never inside the image.
+# scripts/ IS shipped: the data-ops compose service runs the staged
+# ingest/resolve/index CLIs with `python -m scripts.*` inside this image.
 tests/
 eval/
 docs/
-scripts/
 *.md
 
 # Generated artifacts (regenerated per build)

@@ -44,6 +44,7 @@ services:
     profiles: ["production"]
     build:
       context: ./services/search-router
+    image: a-z/search-router:local
     environment:
       HUB_DATABASE_URL: postgresql://searchhub:searchhub@search-db:5432/searchhub
       POSTGRES_URL: postgresql://searchhub:searchhub@search-db:5432/searchhub
@@ -95,6 +96,8 @@ services:
       PROVIDER_VN_STOCK_ENABLED: "false"
       JSON_LOGS: "true"
     depends_on:
+      search-seed:
+        condition: service_completed_successfully
       search-db:
         condition: service_healthy
       redis:
@@ -117,8 +120,60 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  search-db:
+  # One-shot admin-graph seed (P14). Runs migrations, then upserts the
+  # bundled VN admin seed (units + aliases + relations + geometry) so the
+  # retrieval brain can resolve locations and ingest can anchor records.
+  # Idempotent — reruns update in place, never delete historical units.
+  search-seed:
     profiles: ["production"]
+    build:
+      context: ./services/search-router
+    image: a-z/search-router:local
+    entrypoint:
+      - sh
+      - -c
+      - 'python -m db.migrate --dsn "$$HUB_DATABASE_URL" && python -m db.seed_admin'
+    environment:
+      HUB_DATABASE_URL: postgresql://searchhub:searchhub@search-db:5432/searchhub
+    depends_on:
+      search-db:
+        condition: service_healthy
+    restart: "no"
+
+  # Data-ops shell (P-DATA-1). Not part of the production profile — invoke
+  # explicitly to run the staged pipeline inside the built image:
+  #   docker compose -f docker-compose.yml -f docker-compose.production.yml \
+  #     --profile data-ops run --rm data-ops -m scripts.ingest \
+  #     --provider osm --file /data/vietnam-latest.osm.pbf
+  # Host downloads land in ./data (gitignored); the container sees /data.
+  data-ops:
+    profiles: ["data-ops"]
+    build:
+      context: ./services/search-router
+    image: a-z/search-router:local
+    entrypoint: ["python"]
+    command: ["-m", "scripts.ingest", "--help"]
+    environment:
+      HUB_DATABASE_URL: postgresql://searchhub:searchhub@search-db:5432/searchhub
+      POSTGRES_URL: postgresql://searchhub:searchhub@search-db:5432/searchhub
+      OPENSEARCH_ENABLED: "true"
+      OPENSEARCH_HOST: opensearch
+      OPENSEARCH_PORT: "9200"
+      OPENSEARCH_USE_SSL: "false"
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ${PILOT_DATA_DIR:-./data}:/data
+    depends_on:
+      search-db:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    restart: "no"
+
+  # Also in the data-ops profile: ingest/resolve/index runs need it
+  # without booting the full production profile.
+  search-db:
+    profiles: ["production", "data-ops"]
     image: postgis/postgis:16-3.5-alpine
     environment:
       POSTGRES_USER: searchhub
@@ -147,7 +202,7 @@ services:
     restart: unless-stopped
 
   opensearch:
-    profiles: ["production"]
+    profiles: ["production", "data-ops"]
     image: opensearchproject/opensearch:2.19.6
     environment:
       discovery.type: single-node
