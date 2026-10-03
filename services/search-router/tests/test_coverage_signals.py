@@ -4,9 +4,15 @@ Pure-function tests: no DB needed. record_coverage() itself is exercised
 against the live stack (pool None → graceful skip).
 """
 
+import asyncio
 from datetime import date
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
+import core.unified_retrieve as ur
+from api import v1
 from core.coverage import coverage_cell, iso_week
+from core.unified_retrieve import ExistingCoreServices, UnifiedRetriever
 
 
 def _result(
@@ -101,14 +107,6 @@ def test_iso_week_format():
 # --- record=false guard (P-LEARNING-4.1) -------------------------------------
 # Benchmark/test traffic sends record:false — it must not inflate real
 # demand signals, and a coverage-DB failure must never fail the search.
-
-import asyncio
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
-
-import core.unified_retrieve as ur
-from api import v1
-from core.unified_retrieve import ExistingCoreServices, UnifiedRetriever
 
 
 def _stubbed_services(monkeypatch):
