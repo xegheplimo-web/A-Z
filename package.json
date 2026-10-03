@@ -14,7 +14,8 @@
     "benchmark:production": "tsx scripts/production-benchmark.ts",
     "telemetry:retention": "tsx scripts/telemetry-retention.ts",
     "test:retention": "tsx scripts/test-telemetry-retention.ts",
-    "test:bad-search-review": "tsx scripts/test-bad-search-review.ts"
+    "test:bad-search-review": "tsx scripts/test-bad-search-review.ts",
+    "test:golden": "tsx scripts/test-golden-promotion.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
