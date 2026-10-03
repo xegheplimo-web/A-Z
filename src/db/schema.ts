@@ -254,12 +254,12 @@ export const goldenCandidates = pgTable(
     evidenceSnapshot: jsonb("evidence_snapshot"), // intent/scope/results/coverage lúc tạo
     // --- human labels (P6: chỉ người mới ghi, telemetry chỉ đề cử) ---
     intent: text("intent"),
-    geoScope: jsonb("geo_scope"),              // {admin_ids: string[]}
+    geoScope: jsonb("geo_scope"),              // VN100-0: {admin_ids?, anchor?, radius_m?}
     specialty: text("specialty"),
     expectedEntities: jsonb("expected_entities"),   // string[] tên/id mong đợi
-    relevanceLabels: jsonb("relevance_labels"),     // {result_id: 0..3}
-    freshnessRequirement: text("freshness_requirement"), // static|slow|medium|high|realtime|current
-    authorityRequirement: text("authority_requirement"), // vd corroborated_or_better
+    relevanceLabels: jsonb("relevance_labels"),     // {entity_name: 0..3}
+    freshnessRequirement: text("freshness_requirement"), // enum: static|slow|medium|high|realtime
+    authorityRequirement: text("authority_requirement"), // enum: any|*_or_better|authoritative
     abstentionExpected: boolean("abstention_expected").notNull().default(false),
     reviewNote: text("review_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

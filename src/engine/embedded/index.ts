@@ -50,6 +50,7 @@ function toPlaceDTO(p: ScoredPlace): PlaceDTO {
     image: p.image,
     source: p.source,
     verified: p.verified,
+    verificationLevel: p.verified ? "verified" : "observed",
     note: p.note,
     score: Math.round(p.score * 10) / 10,
     lat: p.lat ?? null,

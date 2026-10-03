@@ -19,17 +19,53 @@
 // ---------------------------------------------------------------------------
 import { db } from "@/db";
 import { badSearchReviews, evalRuns, goldenCandidateEvents, goldenCandidates, searchTraces } from "@/db/schema";
+import { INTENTS } from "@/core/contract";
 import { analyze } from "@/lib/pipeline";
-import { normalize } from "@/lib/vi";
+import { haversineKm, normalize } from "@/lib/vi";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 export const GOLDEN_STATUSES = ["draft", "labeled", "approved", "promoted", "superseded"] as const;
 export type GoldenStatus = (typeof GOLDEN_STATUSES)[number];
 export const BENCHMARK_STATUSES: readonly GoldenStatus[] = ["approved", "promoted"];
 
+// ---------------------------------------------------------------------------
+// VN100-0 Label Contract v1 — FROZEN.
+// Vocabulary khóa trước khi nhân dataset; đổi = bump contract + migrate, không
+// sửa lặt vặt. docs/VN100-LABEL-CONTRACT.md là tài liệu đối chiếu.
+// ---------------------------------------------------------------------------
+
+/** Thang freshness yêu cầu — về tốc độ truth thay đổi, không phải freshness query. */
+export const GOLDEN_FRESHNESS = ["static", "slow", "medium", "high", "realtime"] as const;
+export type GoldenFreshness = (typeof GOLDEN_FRESHNESS)[number];
+/** Alias legacy — normalize ngay lúc ghi, không cho vào storage. */
+const FRESHNESS_ALIASES: Record<string, GoldenFreshness> = { current: "high" };
+
+/** Rung tối thiểu trên verification ladder (observed<corroborated<verified<authoritative). "any" = không yêu cầu. */
+export const GOLDEN_AUTHORITY = ["any", "observed_or_better", "corroborated_or_better", "verified_or_better", "authoritative"] as const;
+export type GoldenAuthority = (typeof GOLDEN_AUTHORITY)[number];
+
+/** relevance_labels grade 0..3 — 3 exact-correct · 2 relevant-partial · 1 related-only · 0 irrelevant/harmful. */
+export const GOLDEN_RELEVANCE_GRADES = [0, 1, 2, 3] as const;
+
+/** geo_scope v1: admin_ids HOẶC anchor+radius_m (query "gần X"). Có thể kết hợp. */
+export interface GoldenGeoScope {
+  admin_ids?: string[];
+  anchor?: { label?: string; lat?: number; lng?: number };
+  radius_m?: number;
+}
+
+const VERIFICATION_RANK: Record<string, number> = { observed: 0, corroborated: 1, verified: 2, authoritative: 3 };
+const AUTHORITY_MIN_RANK: Record<GoldenAuthority, number> = {
+  any: -1,
+  observed_or_better: 0,
+  corroborated_or_better: 1,
+  verified_or_better: 2,
+  authoritative: 3,
+};
+
 export interface GoldenLabels {
   intent?: string | null;
-  geoScope?: { admin_ids?: string[] } | null;
+  geoScope?: GoldenGeoScope | null;
   specialty?: string | null;
   expectedEntities?: string[] | null;
   relevanceLabels?: Record<string, number> | null;
@@ -37,6 +73,72 @@ export interface GoldenLabels {
   authorityRequirement?: string | null;
   abstentionExpected?: boolean | null;
   reviewNote?: string | null;
+}
+
+/** Validate HÌNH DẠNG + vocabulary ngay lúc ghi — dữ liệu xấu không bao giờ vào bảng. */
+export function validateGoldenLabels(labels: GoldenLabels): string[] {
+  const err: string[] = [];
+  if (labels.intent != null && labels.intent.trim() !== "" && !(INTENTS as readonly string[]).includes(labels.intent.trim())) {
+    err.push(`intent '${labels.intent}' không thuộc contract (${INTENTS.join("|")})`);
+  }
+  if (labels.freshnessRequirement != null && labels.freshnessRequirement.trim() !== "") {
+    const f = labels.freshnessRequirement.trim();
+    if (!(GOLDEN_FRESHNESS as readonly string[]).includes(f) && !(f in FRESHNESS_ALIASES)) {
+      err.push(`freshness '${f}' ngoài enum (${GOLDEN_FRESHNESS.join("|")})`);
+    }
+  }
+  if (labels.authorityRequirement != null && labels.authorityRequirement.trim() !== "" &&
+      !(GOLDEN_AUTHORITY as readonly string[]).includes(labels.authorityRequirement.trim())) {
+    err.push(`authority '${labels.authorityRequirement}' ngoài enum (${GOLDEN_AUTHORITY.join("|")})`);
+  }
+  const g = labels.geoScope;
+  if (g != null) {
+    if (g.admin_ids != null && (!Array.isArray(g.admin_ids) || g.admin_ids.some((a) => typeof a !== "string" || !a.trim()))) {
+      err.push("geo_scope.admin_ids phải là mảng string không rỗng");
+    }
+    if (g.anchor != null) {
+      const a = g.anchor;
+      const hasLabel = typeof a.label === "string" && a.label.trim() !== "";
+      const hasCoords = typeof a.lat === "number" && typeof a.lng === "number" &&
+        a.lat >= -90 && a.lat <= 90 && a.lng >= -180 && a.lng <= 180;
+      if (!hasLabel && !hasCoords) err.push("geo_scope.anchor cần label hoặc lat+lng hợp lệ");
+      if (!hasLabel && hasCoords === false && (a.lat != null || a.lng != null)) {
+        err.push("geo_scope.anchor lat/lng không hợp lệ");
+      }
+    }
+    if (g.radius_m != null) {
+      if (typeof g.radius_m !== "number" || !Number.isFinite(g.radius_m) || g.radius_m <= 0) {
+        err.push("geo_scope.radius_m phải là số > 0");
+      } else if (g.anchor == null) {
+        err.push("geo_scope.radius_m chỉ có nghĩa kèm anchor");
+      }
+    }
+  }
+  if (labels.expectedEntities != null) {
+    if (!Array.isArray(labels.expectedEntities) || labels.expectedEntities.some((e) => typeof e !== "string" || !e.trim())) {
+      err.push("expected_entities phải là mảng string không rỗng");
+    } else if (labels.abstentionExpected === true && labels.expectedEntities.length > 0) {
+      err.push("abstention_expected=true mâu thuẫn expected_entities không rỗng");
+    }
+  }
+  if (labels.relevanceLabels != null) {
+    if (typeof labels.relevanceLabels !== "object" || Array.isArray(labels.relevanceLabels)) {
+      err.push("relevance_labels phải là object {entity: grade}");
+    } else {
+      for (const [k, v] of Object.entries(labels.relevanceLabels)) {
+        if (typeof v !== "number" || !Number.isInteger(v) || v < 0 || v > 3) {
+          err.push(`relevance_labels['${k}']=${v} ngoài thang 0..3`);
+        }
+      }
+    }
+  }
+  return err;
+}
+
+/** Normalize label input trước khi ghi — alias → canonical. */
+function normalizeLabels(labels: GoldenLabels): GoldenLabels {
+  const f = labels.freshnessRequirement?.trim();
+  return { ...labels, freshnessRequirement: f ? (FRESHNESS_ALIASES[f] ?? f) : f };
 }
 
 function missingRequiredLabels(c: {
@@ -54,6 +156,13 @@ function missingRequiredLabels(c: {
     miss.push("expected_entities hoặc abstention_expected");
   }
   return miss;
+}
+
+/** Canonical freshness đã ghi — "current" không tồn tại trong storage sau freeze. */
+function canonicalFreshness(f: string | null): string | null {
+  if (!f) return f;
+  const t = f.trim();
+  return FRESHNESS_ALIASES[t] ?? t;
 }
 
 async function emit(candidateId: string, eventType: string, payload?: unknown, actor = "ops") {
@@ -125,13 +234,16 @@ export async function createGoldenCandidate(input: { querySafe: string; actor?: 
   return row;
 }
 
-/** draft|labeled → labeled. Labels được ghi nguyên trạng (đã redacted ở form/query_safe). */
-export async function setGoldenLabels(id: string, labels: GoldenLabels, actor?: string) {
+/** draft|labeled → labeled. Labels phải đúng vocabulary VN100-0 — reject tại đây, không để dữ liệu xấu vào bảng. */
+export async function setGoldenLabels(id: string, input: GoldenLabels, actor?: string) {
   const [c] = await db.select().from(goldenCandidates).where(eq(goldenCandidates.id, id)).limit(1);
   if (!c) throw new Error("candidate không tồn tại");
   if (c.status !== "draft" && c.status !== "labeled") {
     throw new Error(`không sửa label được ở status '${c.status}' — dùng revise để tạo version mới`);
   }
+  const invalid = validateGoldenLabels(input);
+  if (invalid.length) throw new Error(`label vi phạm VN100-0 contract: ${invalid.join("; ")}`);
+  const labels = normalizeLabels(input);
   const [row] = await db
     .update(goldenCandidates)
     .set({
@@ -161,6 +273,16 @@ export async function approveGoldenCandidate(id: string, actor?: string) {
   if (c.status !== "labeled") throw new Error(`approve chỉ từ 'labeled' — hiện '${c.status}'`);
   const miss = missingRequiredLabels(c);
   if (miss.length) throw new Error(`thiếu label bắt buộc: ${miss.join(", ")}`);
+  const invalid = validateGoldenLabels({
+    intent: c.intent,
+    geoScope: c.geoScope as GoldenGeoScope | null,
+    expectedEntities: c.expectedEntities as string[] | null,
+    relevanceLabels: c.relevanceLabels as Record<string, number> | null,
+    freshnessRequirement: canonicalFreshness(c.freshnessRequirement),
+    authorityRequirement: c.authorityRequirement,
+    abstentionExpected: c.abstentionExpected,
+  });
+  if (invalid.length) throw new Error(`label vi phạm VN100-0 contract: ${invalid.join("; ")}`);
   const [row] = await db
     .update(goldenCandidates)
     .set({ status: "approved", approvedAt: new Date(), updatedAt: new Date() })
@@ -191,12 +313,15 @@ export async function promoteGoldenCandidate(id: string, actor?: string) {
 }
 
 /** Sửa approved/promoted → cũ superseded, version+1 ở 'labeled' (đi tiếp approve). */
-export async function reviseGoldenCandidate(id: string, labels: GoldenLabels, actor?: string) {
+export async function reviseGoldenCandidate(id: string, input: GoldenLabels, actor?: string) {
   const [c] = await db.select().from(goldenCandidates).where(eq(goldenCandidates.id, id)).limit(1);
   if (!c) throw new Error("candidate không tồn tại");
   if (c.status !== "approved" && c.status !== "promoted") {
     throw new Error(`revise chỉ áp dụng cho approved/promoted — hiện '${c.status}' (draft/labeled sửa trực tiếp)`);
   }
+  const invalid = validateGoldenLabels(input);
+  if (invalid.length) throw new Error(`label vi phạm VN100-0 contract: ${invalid.join("; ")}`);
+  const labels = normalizeLabels(input);
   const miss = missingRequiredLabels({
     intent: labels.intent ?? null,
     freshnessRequirement: labels.freshnessRequirement ?? null,
@@ -268,8 +393,7 @@ export async function exportGoldenBenchmark() {
 
 // --- benchmark runner -------------------------------------------------------
 // Chạy case qua pipeline thật với record:false — không làm bẩn telemetry.
-
-const VERIFICATION_RANK: Record<string, number> = { observed: 0, corroborated: 1, verified: 2, authoritative: 3 };
+// Assert theo VN100-0 Label Contract v1 (docs/VN100-LABEL-CONTRACT.md).
 
 export async function runGoldenEval(opts: { name?: string; actor?: string } = {}) {
   const cases = await exportGoldenBenchmark();
@@ -286,26 +410,70 @@ export async function runGoldenEval(opts: { name?: string; actor?: string } = {}
 
     let ok = true;
     if (c.intent && u.intent !== c.intent) { fail(`intent=${u.intent}, mong đợi ${c.intent}`); ok = false; }
-    const wantGeo = (c.geo_scope as { admin_ids?: string[] } | null)?.admin_ids ?? [];
-    for (const g of wantGeo) {
+
+    // geo_scope: admin_ids → resolvedCurrentIds; anchor → retrieval.anchor; radius_m → khoảng cách places.
+    const geo = (c.geo_scope as GoldenGeoScope | null) ?? {};
+    for (const g of geo.admin_ids ?? []) {
       if (!u.resolvedCurrentIds.includes(g)) { fail(`thiếu admin ${g} trong resolved`); ok = false; }
     }
-    if (c.specialty && u.specialty !== c.specialty) { fail(`specialty=${u.specialty ?? "∅"}, mong đợi ${c.specialty}`); ok = false; }
+    const anchor = x.retrieval.anchor;
+    if (geo.anchor) {
+      if (!anchor) {
+        fail("geo_scope.anchor mong đợi nhưng response không có anchor");
+        ok = false;
+      } else {
+        if (geo.anchor.label && !normalize(anchor.label).includes(normalize(geo.anchor.label))) {
+          fail(`anchor='${anchor.label}', mong đợi '${geo.anchor.label}'`); ok = false;
+        }
+        if (typeof geo.anchor.lat === "number" && typeof geo.anchor.lng === "number" &&
+            haversineKm(anchor.lat, anchor.lng, geo.anchor.lat, geo.anchor.lng) > 1) {
+          fail(`anchor lệch >1km so với mong đợi`); ok = false;
+        }
+      }
+    }
     const places = [...x.retrieval.places.exact, ...x.retrieval.places.unverified];
+    if (typeof geo.radius_m === "number" && anchor) {
+      for (const p of places) {
+        const dKm = p.distanceKm ?? (p.lat != null && p.lng != null ? haversineKm(anchor.lat, anchor.lng, p.lat, p.lng) : null);
+        if (dKm != null && dKm * 1000 > geo.radius_m) {
+          fail(`place '${p.name}' ngoài radius_m=${geo.radius_m} (d=${Math.round(dKm * 1000)}m)`); ok = false;
+        }
+      }
+    }
+
+    if (c.specialty && u.specialty !== c.specialty) { fail(`specialty=${u.specialty ?? "∅"}, mong đợi ${c.specialty}`); ok = false; }
     if (c.abstention_expected && x.retrieval.places.exact.length > 0) {
       fail(`abstention mong đợi nhưng có ${x.retrieval.places.exact.length} exact`);
       ok = false;
     }
     const names = places.map((p) => normalize(p.name));
+    const exactNames = x.retrieval.places.exact.map((p) => normalize(p.name));
     for (const e of (c.expected_entities as string[] | null) ?? []) {
       const ne = normalize(e);
       if (!names.some((n) => n.includes(ne))) { fail(`thiếu entity '${e}'`); ok = false; }
     }
-    if (c.authority_requirement === "corroborated_or_better") {
+    // relevance_labels: grade 3 → phải trong exact · 2 → exact∪unverified · ≤1 → không được trong exact.
+    for (const [entity, grade] of Object.entries((c.relevance_labels as Record<string, number> | null) ?? {})) {
+      const ne = normalize(entity);
+      const inExact = exactNames.some((n) => n.includes(ne));
+      const inAny = names.some((n) => n.includes(ne));
+      if (grade >= 3 && !inExact) { fail(`relevance 3 '${entity}' không có trong exact`); ok = false; }
+      else if (grade === 2 && !inAny) { fail(`relevance 2 '${entity}' không có trong exact∪unverified`); ok = false; }
+      else if (grade <= 1 && inExact) { fail(`relevance ${grade} '${entity}' lại nằm trong exact`); ok = false; }
+    }
+    // authority_requirement: rung tối thiểu trên verification ladder cho mọi exact place.
+    const minRank = AUTHORITY_MIN_RANK[(c.authority_requirement ?? "any") as GoldenAuthority] ?? -1;
+    if (minRank >= 0) {
       for (const p of x.retrieval.places.exact) {
-        const lvl = (p as { verification_level?: string }).verification_level ?? "observed";
-        if ((VERIFICATION_RANK[lvl] ?? 0) < 1) { fail(`exact '${p.name}' verification=${lvl} < corroborated`); ok = false; }
+        const lvl = p.verificationLevel ?? "observed";
+        if ((VERIFICATION_RANK[lvl] ?? 0) < minRank) {
+          fail(`exact '${p.name}' verification=${lvl} < ${c.authority_requirement}`); ok = false;
+        }
       }
+    }
+    // freshness_requirement: realtime/high → brain phải resolve freshness cụ thể.
+    if ((c.freshness_requirement === "realtime" || c.freshness_requirement === "high") && u.freshness === "any") {
+      fail(`freshness_requirement=${c.freshness_requirement} nhưng brain freshness=any`); ok = false;
     }
     if (ok) pass++;
   }
