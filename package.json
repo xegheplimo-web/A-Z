@@ -13,7 +13,8 @@
     "test:e2e:production": "node scripts/production-e2e.mjs",
     "benchmark:production": "tsx scripts/production-benchmark.ts",
     "telemetry:retention": "tsx scripts/telemetry-retention.ts",
-    "test:retention": "tsx scripts/test-telemetry-retention.ts"
+    "test:retention": "tsx scripts/test-telemetry-retention.ts",
+    "test:bad-search-review": "tsx scripts/test-bad-search-review.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

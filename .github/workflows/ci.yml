@@ -126,6 +126,8 @@ jobs:
         run: npx tsx scripts/smoke-upstreams.ts
       - name: Auth test
         run: npx tsx scripts/test-auth.ts
+      - name: Bad-search review workflow test
+        run: npm run test:bad-search-review
 
   e2e:
     runs-on: ubuntu-latest
