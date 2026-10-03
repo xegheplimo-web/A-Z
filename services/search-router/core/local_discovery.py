@@ -26,10 +26,9 @@ import time
 from collections.abc import Awaitable
 from urllib.parse import urlparse
 
-from models import BusinessEntity
-
 from core.business_entity import category_for
 from core.entity_resolver import fold
+from models import BusinessEntity
 from observability.prometheus import observe_local_expansion, observe_local_lane
 
 _WS_RE = re.compile(r"\s+")
@@ -108,6 +107,22 @@ _SPECIALTY_LEXICON: dict[str, tuple[str, ...]] = {
     "cà phê": ("cà phê", "coffee", "cafe"),
     "bánh sinh nhật": ("bánh sinh nhật", "bánh kem", "bánh ngọt"),
     "sắt thép": ("sắt thép", "vật liệu xây", "thép"),
+    # Order matters: "quán nhậu" precedes "ăn đêm" so a dedicated quán-nhậu
+    # query resolves to the narrower specialty even though "quán nhậu" is
+    # also an ăn-đêm support variant.
+    "quán nhậu": ("quán nhậu", "quán nhậu bia", "nhậu"),
+    "ăn đêm": (
+        "ăn đêm",
+        "ăn khuya",
+        "quán ăn đêm",
+        "quán ăn khuya",
+        "đồ ăn đêm",
+        "đồ ăn khuya",
+        "nhà hàng mở muộn",
+        "quán nhậu",
+    ),
+    "tạp hóa": ("tạp hóa", "bách hóa", "cửa hàng tạp hóa", "cửa hàng bách hóa"),
+    "nhà thuốc": ("nhà thuốc", "hiệu thuốc", "quầy thuốc", "tiệm thuốc"),
 }
 
 

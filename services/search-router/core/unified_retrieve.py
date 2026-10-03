@@ -17,9 +17,15 @@ import time
 from typing import Any, cast
 from urllib.parse import urlsplit
 
+from core.business_entity import extract_business_batch
 from core.coverage import record_coverage
 from core.entity_resolver import fold
-from core.local_discovery import extract_specialty, locality_of
+from core.local_discovery import (
+    dedupe_local_candidates,
+    entity_supports_specialty,
+    extract_specialty,
+    locality_of,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +43,128 @@ def plain(value: Any) -> Any:
 # P-DATA-1A — canonical verification levels that may gate an exact
 # local result; 'observed' (single fresh source) never qualifies.
 _VERIFIED_LEVELS = frozenset({"corroborated", "verified", "authoritative"})
+
+# ─── Web → place-candidate extraction (P-LOCAL-DISCOVERY-1) ──────────────────
+# Deterministic heuristics only. A web-extracted entity becomes a candidate
+# when it looks venue-shaped AND its own text carries the query's locality —
+# listicle titles and out-of-scope names are filtered out, never shown.
+
+_ADMIN_PREFIXES = (
+    "phuong",
+    "xa",
+    "thi tran",
+    "thi xa",
+    "huyen",
+    "quan",
+    "tinh",
+    "thanh pho",
+    "tp",
+)
+
+_VENUE_PREFIX = re.compile(
+    r"^(quan|nha hang|cua hang|tiem|cafe|ca phe|coffee|shop|cho |sieu thi|"
+    r"nha thuoc|hieu thuoc|quay thuoc|phong kham|khach san|nha nghi|homestay|"
+    r"tram xang|cay xang|gara|garage|sua xe|salon|spa|net |karaoke|bar|pub|"
+    r"bep|pho |bun |banh |chao|lau |com |mi |ga |vit |hai san|xoi |che |"
+    r"tra |sinh to|nem |do an|an vat|nuong|sushi|pizza|dim sum)\b"
+)
+
+_LISTICLE_RE = re.compile(
+    r"^(top|danh sach|review|kinh nghiem|tong hop|huong dan|bang gia|"
+    r"lich su|tin tuc|meo|dia diem )\b"
+)
+
+# Site/brand suffixes stripped from page titles so a venue name is judged on
+# the venue part only ("Quán X | TikTok" → "Quán X").
+_SITE_SUFFIX_RE = re.compile(
+    r"\s*[|–—]\s*.*$"
+    r"|\s+-\s+(?:[\w.]*\.(?:vn|com|net|org|info)"
+    r"|(?:facebook|tiktok|youtube|wikipedia|zalo|instagram|google maps?|"
+    r"tripadvisor|baomoi|foody|toplist|mytour|dandautu)\b.*)$",
+    re.IGNORECASE,
+)
+
+# Admin-info / encyclopedia / navigation titles — never venues. "quận" is
+# intentionally absent: folded "quan" cannot be told apart from "quán",
+# the single most common venue word.
+_ADMIN_TITLE_RE = re.compile(
+    r"^(?:huyen|phuong|xa|thi tran|thi xa|tinh|thanh pho|ban do|khu vuc)\b"
+    r"|\((?:huyen|phuong|xa|tinh|quan)\)"
+    r"|\?$"
+    r"|\b(?:bao nhieu|nao dang thu|gom nhung|co bao nhieu|wikipedia|"
+    r"xa phuong nao|don vi hanh chinh|ban do)\b"
+)
+
+# Venue evidence must live in the NAME — body/category inference is
+# query-biased (every doc mentions the query's category).
+_VENUE_TERM_IN_NAME = re.compile(
+    r"\b(quan|nha hang|cua hang|tiem|cafe|ca phe|coffee|sieu thi|nha thuoc|"
+    r"hieu thuoc|phong kham|khach san|nha nghi|homestay|tram xang|cay xang|"
+    r"gara|salon|spa|karaoke|bar|pub|bep|pho|bun|banh|chao|lau|com|mi quang|"
+    r"ga |vit |hai san|xoi|che|tra |sinh to|nem|do an|an vat|nuong|sushi|"
+    r"pizza|dim sum)\b"
+)
+
+
+def _clean_candidate_name(name: str) -> str:
+    """Strip site-brand suffixes from a page-title entity name."""
+    cleaned = _SITE_SUFFIX_RE.split((name or "").strip(), maxsplit=1)[0]
+    return cleaned.strip(" –—-|:,.").strip()
+
+
+def _cand_richness(e: Any) -> int:
+    return sum(
+        1
+        for f in (
+            "name",
+            "category",
+            "address",
+            "phone",
+            "hours",
+            "website",
+            "description",
+            "source_url",
+        )
+        if getattr(e, f, None) not in (None, "")
+    ) + (1 if getattr(e, "lat", None) is not None else 0)
+
+
+def _venue_candidate(e: Any, loc_terms: set[str], query_fold: str) -> bool:
+    """Venue-shaped, in-scope, non-article web extraction.
+
+    The NAME itself must carry venue evidence — aggregator/encyclopedia
+    titles about the locality are rejected even when their body mentions
+    restaurants.
+    """
+    nm = fold(e.name or "")
+    if len(nm) < 3 or nm == query_fold or nm in loc_terms:
+        # Empty name, the extractor's query-fallback name, or a bare
+        # locality reference — none carry venue evidence.
+        return False
+    if _LISTICLE_RE.match(nm) or _ADMIN_TITLE_RE.search(nm):
+        return False
+    text = fold(f"{e.name} {e.address} {e.description}")
+    if loc_terms and not any(t in text for t in loc_terms):
+        return False
+    return bool(_VENUE_PREFIX.match(nm) or _VENUE_TERM_IN_NAME.search(nm))
+
+
+def _locality_terms(location_text: str, units: list[dict]) -> set[str]:
+    """Folded locality anchors: the raw locality phrase plus admin-unit names
+    stripped of their type prefix ("Phường Yên Dũng" → "yen dung")."""
+    terms = set()
+    lt = fold(location_text or "")
+    if lt:
+        terms.add(lt)
+    for u in units or []:
+        nm = fold(u.get("name") or "")
+        for pfx in _ADMIN_PREFIXES:
+            if nm.startswith(pfx + " "):
+                nm = nm[len(pfx) + 1 :]
+                break
+        if nm:
+            terms.add(nm)
+    return terms
 
 
 def distance_km(a: dict, b: dict) -> float | None:
@@ -373,6 +501,8 @@ class UnifiedRetriever:
                     "cà phê": {"cafe", "coffee_shop"},
                     "tạp hóa": {"convenience", "grocery", "supermarket"},
                     "nhà thuốc": {"pharmacy"},
+                    "ăn đêm": {"restaurant", "bar", "food", "eatery"},
+                    "quán nhậu": {"restaurant", "bar"},
                 }
                 matched_specialty = matched_specialty or (
                     specialty is not None
@@ -461,6 +591,111 @@ class UnifiedRetriever:
                     "status": "skipped",
                     "ms": 0,
                     "count": 0,
+                }
+            )
+        # ── Web → structured place candidates (P-LOCAL-DISCOVERY-1) ─────────
+        # Canonical coverage insufficient → venue-like entities extracted
+        # from the widened lanes become candidates. Runs on the raw lane
+        # sources — never on finished docs — so a reader-rerank timeout does
+        # not blind the flywheel (it consumes the whole deadline).
+        # Candidates never enter places.exact.
+        candidates_out: list[dict] = []
+        if local and len(exact) < min(2, limit) and lane_docs:
+            cand_started = time.monotonic()
+            cand_status = "empty"
+            try:
+                src_rows = [r for lane_ in lane_docs for r in lane_][:30]
+                texts, urls, titles = [], [], []
+                for row in src_rows:
+                    url = row.get("canonical_url") or row.get("url") or ""
+                    if not url.startswith(("http://", "https://")):
+                        continue
+                    body = (row.get("title") or "") + "\n" + (
+                        row.get("content") or row.get("description") or ""
+                    )
+                    if not body.strip():
+                        continue
+                    texts.append(body)
+                    urls.append(url)
+                    titles.append(row.get("title") or "")
+                remaining = deadline - time.monotonic()
+                entities = []
+                if texts and remaining > 0:
+                    entities = await asyncio.wait_for(
+                        extract_business_batch(
+                            texts, query, llm=None, source_urls=urls
+                        ),
+                        min(2.0, remaining),
+                    )
+                # Normalize page-title names before any merge so the same
+                # venue on different sites corroborates correctly.
+                for e in entities:
+                    e.name = _clean_candidate_name(e.name)
+                entities = dedupe_local_candidates(entities)
+                # Same-name merge across docs: a venue named identically on
+                # two independent pages counts as corroborated. Distinct
+                # names never merge — corroboration stays conservative.
+                groups: dict[str, list] = {}
+                for e in entities:
+                    groups.setdefault(fold(e.name or ""), []).append(e)
+                merged = []
+                for grp in groups.values():
+                    base = max(grp, key=_cand_richness)
+                    seen_urls = {g.source_url for g in grp if g.source_url}
+                    base.supporting_source_count = max(1, len(seen_urls))
+                    merged.append(base)
+
+                loc_terms = _locality_terms(location_text, list(matched) + list(current))
+                admin_scope = (
+                    current[0].get("name")
+                    if current
+                    else matched[0].get("name")
+                    if matched
+                    else location_text or None
+                )
+                title_by_url = dict(zip(urls, titles))
+                for e in merged:
+                    if not _venue_candidate(e, loc_terms, normalized):
+                        continue
+                    supports = bool(specialty) and entity_supports_specialty(
+                        e, specialty, forms
+                    )
+                    candidates_out.append(
+                        {
+                            "id": "cand-"
+                            + hashlib.sha256(
+                                f"{fold(e.name)}|{fold(e.address)}".encode()
+                            ).hexdigest()[:16],
+                            "name": e.name,
+                            "specialty": specialty if supports else None,
+                            "address": e.address or None,
+                            "source_url": e.source_url or None,
+                            "source_title": title_by_url.get(e.source_url)
+                            or None,
+                            "evidence": (e.description or "")[:240] or None,
+                            "verification_level": "corroborated"
+                            if e.supporting_source_count >= 2
+                            else "observed",
+                            "admin_scope": admin_scope,
+                        }
+                    )
+                candidates_out.sort(
+                    key=lambda c: (
+                        c["verification_level"] != "corroborated",
+                        c["specialty"] is None,
+                    )
+                )
+                candidates_out = candidates_out[:8]
+                cand_status = "ok" if candidates_out else "empty"
+            except Exception:  # noqa: BLE001 — extraction degrades to no candidates
+                cand_status = "error"
+            stages.append(
+                {
+                    "provider": "web-extract",
+                    "lane": "candidates",
+                    "status": cand_status,
+                    "count": len(candidates_out),
+                    "ms": round((time.monotonic() - cand_started) * 1000),
                 }
             )
         before_rank = time.monotonic()
@@ -555,14 +790,32 @@ class UnifiedRetriever:
                 "categories": [
                     {
                         "giò chả": "gio-cha",
+                        "phở": "pho",
+                        "bún chả": "bun-cha",
+                        "bánh mì": "banh-mi",
                         "cà phê": "cafe",
+                        "bánh sinh nhật": "banh-sinh-nhat",
                         "sắt thép": "vlxd",
+                        "quán nhậu": "an-dem",
+                        "ăn đêm": "an-dem",
                         "tạp hóa": "tap-hoa",
                         "nhà thuốc": "nha-thuoc",
                     }[specialty]
                 ]
                 if specialty
-                in {"giò chả", "cà phê", "sắt thép", "tạp hóa", "nhà thuốc"}
+                in {
+                    "giò chả",
+                    "phở",
+                    "bún chả",
+                    "bánh mì",
+                    "cà phê",
+                    "bánh sinh nhật",
+                    "sắt thép",
+                    "quán nhậu",
+                    "ăn đêm",
+                    "tạp hóa",
+                    "nhà thuốc",
+                }
                 else [],
                 "freshness": "today" if profile.get("freshness_required") else "any",
                 "locations": [
@@ -594,7 +847,7 @@ class UnifiedRetriever:
                 "exact": exact[:limit],
                 "unverified": unverified[: max(0, limit - len(exact))],
                 "related": related[:limit],
-                "candidates": [],
+                "candidates": candidates_out,
             },
             "docs": doc_rows,
             "coverage": {

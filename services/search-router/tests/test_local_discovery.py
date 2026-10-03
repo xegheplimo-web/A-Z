@@ -1,6 +1,7 @@
 """LOCAL-1 — bounded local discovery unit tests (deterministic, no I/O)."""
 
 import pytest
+
 from core.local_discovery import (
     _category_compatible,
     _query_relevant,
@@ -344,3 +345,24 @@ class TestFoldedSpecialty:
     def test_no_specialty(self):
         specialty, variants = extract_specialty("quán ăn Hà Nội")
         assert specialty is None and variants == ()
+
+    # P-LOCAL-DISCOVERY-1 — production specialty parity with the embedded
+    # engine. Regression: "quán ăn đêm tại yên dũng" used to return None.
+    def test_late_night_specialty(self):
+        specialty, variants = extract_specialty("quán ăn đêm tại yên dũng")
+        assert specialty == "ăn đêm"
+        assert "quán nhậu" in variants
+
+    def test_late_night_variants(self):
+        for q in ("ăn khuya Yên Dũng", "an dem yen dung", "nhà hàng mở muộn"):
+            specialty, _ = extract_specialty(q)
+            assert specialty == "ăn đêm", q
+
+    def test_quan_nhau_precedes_late_night(self):
+        # "quán nhậu" is also an ăn-đêm variant; the dedicated specialty wins.
+        specialty, _ = extract_specialty("quán nhậu Bắc Giang")
+        assert specialty == "quán nhậu"
+
+    def test_grocery_and_pharmacy_parity(self):
+        assert extract_specialty("cửa hàng bách hóa Yên Dũng")[0] == "tạp hóa"
+        assert extract_specialty("nhà thuốc gần Neo")[0] == "nhà thuốc"

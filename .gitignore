@@ -39,3 +39,8 @@ next-env.d.ts
 
 # pilot data
 /data/
+
+# agent worktrees / local agent state (machine-specific)
+/.kilo/
+/.kilocode/
+/.devin/mcp_config.local.json
