@@ -54,7 +54,24 @@ def coverage_cell(result: dict[str, Any], today: date | None = None) -> dict[str
         zero = len(docs) == 0
         low = len(docs) < 3
 
-    admin_id = (u.get("resolved_current_ids") or [None])[0]
+    # Canonical serving scope, not resolver array order. Historical units
+    # expand to ALL successors (Neo → old:07681 → 6 phường), so pick the
+    # same-code successor first (old:07681 → new:07681 = direct rename),
+    # else commune → province → resolved ids. resolved_current_ids[0] alone
+    # split the same demand cell whenever successor order shifted.
+    scope = result.get("scope") or {}
+    communes = scope.get("communes") or []
+    provinces = scope.get("provinces") or []
+    matched_codes = {
+        str(loc.get("id", "")).rsplit(":", 1)[-1]
+        for loc in (u.get("locations") or [])
+    }
+    admin_id = next(
+        (c for c in communes if c.rsplit(":", 1)[-1] in matched_codes),
+        None,
+    ) or (communes or [None])[0] or (provinces or [None])[0] or (
+        u.get("resolved_current_ids") or [None]
+    )[0]
     specialty = u.get("specialty")
     if intent == "local_search" and not (admin_id or specialty):
         return None

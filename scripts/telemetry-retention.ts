@@ -31,6 +31,32 @@ async function main() {
        AND query_safe IS NOT NULL AND trace IS NOT NULL
        AND trace->>'query' IS DISTINCT FROM query_safe`);
 
+  // `normalized` giữ PII nguyên trạng (fold giữ số/email) — cột này sống qua
+  // tầng LONG nên phải redact ngay tại HOT→WARM. Không có query_safe tương
+  // đương cho normalized: áp trực tiếp regex PII (Postgres — không lookbehind,
+  // dùng \m/\M word boundary).
+  // Lưu ý: drizzle sql`` cook escape sequences — \\m trong source = \m tới Postgres.
+  const n = await db.execute(sql`
+    UPDATE search_traces
+       SET normalized = regexp_replace(regexp_replace(regexp_replace(normalized,
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}', '[email]', 'g'),
+              '\\m(\\+84|0)[0-9]{8,10}\\M', '[sdt]', 'g'),
+              '\\m[0-9]{6,}\\M', '[id]', 'g')
+     WHERE created_at < now() - make_interval(days => ${HOT_DAYS})
+       AND (normalized ~ '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}'
+         OR normalized ~ '\\m[0-9]{6,}\\M')`);
+  const tn = await db.execute(sql`
+    UPDATE search_traces
+       SET trace = jsonb_set(trace, '{normalized}', to_jsonb(
+              regexp_replace(regexp_replace(regexp_replace(trace->>'normalized',
+              '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}', '[email]', 'g'),
+              '\\m(\\+84|0)[0-9]{8,10}\\M', '[sdt]', 'g'),
+              '\\m[0-9]{6,}\\M', '[id]', 'g')))
+     WHERE created_at < now() - make_interval(days => ${HOT_DAYS})
+       AND trace IS NOT NULL
+       AND (trace->>'normalized' ~ '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}'
+         OR trace->>'normalized' ~ '\\m[0-9]{6,}\\M')`);
+
   // LONG: xóa payload trace JSONB — aggregates cột + interactions giữ lại
   const tr = await db.execute(sql`
     UPDATE search_traces
@@ -44,7 +70,7 @@ async function main() {
      WHERE created_at < now() - make_interval(days => ${INTERACTION_DAYS})`);
 
   console.log(
-    `retention: query→safe ${q.rowCount ?? 0} · trace.query→safe ${t.rowCount ?? 0} · trace JSONB dropped ${tr.rowCount ?? 0} · interactions purged ${i.rowCount ?? 0}`,
+    `retention: query→safe ${q.rowCount ?? 0} · trace.query→safe ${t.rowCount ?? 0} · normalized→safe ${n.rowCount ?? 0} · trace.normalized→safe ${tn.rowCount ?? 0} · trace JSONB dropped ${tr.rowCount ?? 0} · interactions purged ${i.rowCount ?? 0}`,
   );
   await pool.end();
 }
