@@ -20,6 +20,7 @@
   - `npx tsx scripts/test-telemetry-retention.ts` (telemetry retention regression; needs DATABASE_URL)
 - Telemetry retention (run daily in prod): `npm run telemetry:retention`
 - DB: `npx drizzle-kit push`; seed: `npx tsx src/db/seed.ts`
+- Telemetry retention: `npm run telemetry:retention` (schedule daily ~03:30; advisory-locked, single-run; alert nếu exit≠0). Regression test: `npm run test:retention`
 
 ## Conventions
 - Facade pattern: this repo is the public API surface; retrieval contract v1 in `docs/retrieve.contract.md`

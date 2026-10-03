@@ -1,6 +1,11 @@
 // ---------------------------------------------------------------------------
-// Telemetry retention (P-LEARNING) — thực thi 3 tầng lưu trữ. Chạy định kỳ:
-//   npx tsx scripts/telemetry-retention.ts
+// Telemetry retention (P-LEARNING) — thực thi 3 tầng lưu trữ. Chạy định kỳ
+// (khuyến nghị daily, vd cron 03:30 / Task Scheduler):
+//   npm run telemetry:retention
+//
+//   Single-run: pg_try_advisory_lock (key LOCK_KEY) — instance thứ hai skip
+//   sạch, exit 0. Hard timeout RETENTION_TIMEOUT_MS (mặc định 10m) → exit 2.
+//   Scheduler nên alert khi exit != 0; stdout log rows-affected mỗi tầng.
 //
 //   HOT  0–14 ngày : full trace (query raw + trace JSONB) để debug regression
 //   WARM 14–90     : query → query_safe, trace.query → query_safe; giữ cột
@@ -16,8 +21,30 @@ import { sql } from "drizzle-orm";
 const HOT_DAYS = Number(process.env.TRACE_HOT_DAYS ?? 14);
 const WARM_DAYS = Number(process.env.TRACE_WARM_DAYS ?? 90);
 const INTERACTION_DAYS = Number(process.env.INTERACTION_DAYS ?? 180);
+const TIMEOUT_MS = Number(process.env.RETENTION_TIMEOUT_MS ?? 10 * 60_000);
+// Advisory lock key — cố định, mọi instance/job dùng chung để single-run.
+const LOCK_KEY = 73190426; // "vsret"
 
 async function main() {
+  // pg_advisory_lock là session-scoped → giữ MỘT connection riêng cho lock
+  // trong suốt job (work chạy qua pool connections khác vẫn được bảo vệ).
+  const lockClient = await pool.connect();
+  const [lock] = (
+    await lockClient.query("SELECT pg_try_advisory_lock($1) AS got", [LOCK_KEY])
+  ).rows as { got: boolean }[];
+  if (!lock?.got) {
+    console.log("retention: another run holds the advisory lock — skip");
+    lockClient.release();
+    await pool.end();
+    return;
+  }
+  const kill = setTimeout(() => {
+    console.error(`retention: exceeded ${TIMEOUT_MS}ms — hard exit`);
+    process.exit(2);
+  }, TIMEOUT_MS);
+  kill.unref();
+
+  try {
   // WARM: raw query → query_safe ở cả cột query lẫn trace JSONB
   const q = await db.execute(sql`
     UPDATE search_traces
@@ -72,6 +99,11 @@ async function main() {
   console.log(
     `retention: query→safe ${q.rowCount ?? 0} · trace.query→safe ${t.rowCount ?? 0} · normalized→safe ${n.rowCount ?? 0} · trace.normalized→safe ${tn.rowCount ?? 0} · trace JSONB dropped ${tr.rowCount ?? 0} · interactions purged ${i.rowCount ?? 0}`,
   );
+  } finally {
+    clearTimeout(kill);
+    await lockClient.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]).catch(() => {});
+    lockClient.release();
+  }
   await pool.end();
 }
 
