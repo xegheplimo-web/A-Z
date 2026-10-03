@@ -245,8 +245,10 @@ export const goldenCandidates = pgTable(
   "golden_candidates",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    reviewId: uuid("review_id"), // provenance → bad_search_reviews.id
-    traceId: uuid("trace_id"),   // trace gốc lúc phát hiện (có thể đã retention-purge)
+    /** bad_search_review (confirmed_bad) | manual_nomination (positive control, review_id=null) */
+    source: text("source").notNull().default("bad_search_review"),
+    reviewId: uuid("review_id"), // provenance → bad_search_reviews.id — bắt buộc khi source=bad_search_review
+    traceId: uuid("trace_id"),   // trace gốc lúc phát hiện (có thể đã retention-purge; null khi dry-run nominate)
     querySafe: text("query_safe").notNull(),
     version: integer("version").notNull().default(1),
     supersedesId: uuid("supersedes_id"), // → case cũ bị thay thế (self-ref)

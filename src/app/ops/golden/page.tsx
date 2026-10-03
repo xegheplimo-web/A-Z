@@ -121,6 +121,22 @@ export default async function OpsGoldenPage({ searchParams }: { searchParams: Pr
         Sửa approved case tạo version mới và supersede bản cũ — không overwrite.
       </p>
 
+      {/* Manual nomination — positive control. Dry-run record:false, không làm bẩn telemetry. */}
+      <form method="post" action="/ops/golden/actions" className="mt-5 flex flex-wrap items-end gap-2 rounded-2xl border border-line bg-ink-2/60 p-4">
+        <input type="hidden" name="op" value="nominate" />
+        <label className="min-w-[260px] flex-1 text-[11px] text-fog-2">
+          Nominate benchmark case (positive control)
+          <input name="query" required maxLength={500} placeholder="nhà thuốc gần Neo"
+            className="mt-1 w-full rounded-lg border border-line-2 bg-ink-2 px-3 py-2 text-[12.5px] text-paper" />
+        </label>
+        <button type="submit" className="rounded-lg border border-gold/40 px-3 py-2 text-[11px] font-semibold text-gold">
+          Chạy &amp; tạo candidate
+        </button>
+        <p className="w-full text-[10.5px] text-fog-2">
+          Reuse trace gần nhất nếu có; không có → dry-run record:false. review_id=null, không đụng bad_search_reviews.
+        </p>
+      </form>
+
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {/* candidates cần hành động */}
         <section className="rounded-2xl border border-line bg-ink-2/60 p-4">
@@ -135,6 +151,9 @@ export default async function OpsGoldenPage({ searchParams }: { searchParams: Pr
                     v{c.version} · {STATUS_LABEL[c.status]}
                   </span>
                 </div>
+                <p className="mt-0.5 text-[10px] text-fog-2">
+                  {c.source === "manual_nomination" ? "manual nomination · positive control" : "bad-search review · failure-derived"}
+                </p>
                 <details className="mt-1">
                   <summary className="cursor-pointer text-[11px] text-gold">Label / sửa</summary>
                   <LabelForm c={c} op="label" />
@@ -165,7 +184,7 @@ export default async function OpsGoldenPage({ searchParams }: { searchParams: Pr
                   </span>
                 </div>
                 <p className="mt-1 text-[10.5px] text-fog-2">
-                  {c.intent} · {c.specialty ?? "—"} · {c.authorityRequirement ?? "—"} · {c.abstentionExpected ? "abstain" : `${(c.expectedEntities as string[] | null)?.length ?? 0} entities`}
+                  {c.source === "manual_nomination" ? "manual" : "review"} · {c.intent} · {c.specialty ?? "—"} · {c.authorityRequirement ?? "—"} · {c.abstentionExpected ? "abstain" : `${(c.expectedEntities as string[] | null)?.length ?? 0} entities`}
                 </p>
                 <div className="mt-2 flex gap-2">
                   {c.status === "approved" && (

@@ -89,6 +89,22 @@ Rung tối thiểu trên verification ladder `observed < corroborated < verified
 `PlaceDTO.verification_level` (Retrieval Contract v1, additive) mang level từ
 brain; embedded backend map `verified:true → "verified"`.
 
+## Hai nguồn vào — `golden_candidates.source`
+
+| Source | `review_id` | `trace_id` | Nghĩa |
+|---|---|---|---|
+| `bad_search_review` | bắt buộc → review `confirmed_bad` | trace lúc phát hiện | failure-derived — đo "lỗi từng xảy ra có tái phát không" |
+| `manual_nomination` | `null` (không đụng `bad_search_reviews`) | trace gần nhất nếu có, ngược lại `null` | positive control — đo regression "trước đúng giờ sai" |
+
+Sau `candidate_created` hai nguồn giống nhau: cùng funnel label → approve →
+promote, cùng `validateGoldenLabels()`, cùng dedup một active candidate theo
+`query_safe`. `promoted_to_golden` trên `bad_search_reviews` chỉ áp dụng khi
+`review_id` tồn tại.
+
+Manual nomination **không chạy `record:true`**: không trace gần nhất → dry-run
+`analyze(log:false)` → `evidence_snapshot.source_kind = "dry_run"`. Benchmark
+traffic không bao giờ làm bẩn `search_traces`/`coverage_signals`/demand.
+
 ## Ranh giới với VN_GOLDEN legacy
 
 `eval/golden_set.json` / suite `VN_GOLDEN` trong `src/lib/eval.ts` là regression
