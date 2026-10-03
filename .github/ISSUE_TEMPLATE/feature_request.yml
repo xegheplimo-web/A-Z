@@ -1,0 +1,52 @@
+name: Feature request
+description: Đề xuất tính năng / cải tiến mới
+title: '[Feat]: '
+labels: ['enhancement']
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vấn đề cần giải quyết
+      description: Use-case của bạn là gì? Hiện tại vướng ở đâu?
+      placeholder: 'vd Query tiếng Việt địa phương hay miss vì...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Đề xuất
+      description: Giải pháp bạn mong muốn — càng cụ thể càng tốt (API shape, flag, config, behavior)
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Phương án đã cân nhắc
+      description: Cách khác đã thử / workaround hiện tại
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Vùng ảnh hưởng chính
+      multiple: true
+      options:
+        - Facade (Next.js / /v1 API)
+        - search-router (Python core)
+        - Retrieval contract
+        - Data / fixtures / pilot
+        - CI / tooling / docs
+        - Không rõ
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: willing
+    attributes:
+      label: Đóng góp
+      options:
+        - label: Tôi sẵn sàng tự implement và gửi PR (đọc CONTRIBUTING.md)
+          required: false

@@ -1,0 +1,84 @@
+name: Bug report
+description: Báo lỗi hành vi sai / crash / regression
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Cảm ơn bạn đã báo lỗi. **Lỗ hổng bảo mật xin đừng ghi ở đây** — dùng GitHub Private Vulnerability Reporting (xem `SECURITY.md`).
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit / version
+      description: Commit SHA hoặc version bạn đang chạy (`git rev-parse --short HEAD`)
+      placeholder: vd aef4bd1
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: 'vd Windows 11, Ubuntu 24.04, macOS 15'
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Toolchain versions
+      description: Kết quả `node -v`, `npm -v`, `python --version`, `uv --version`, `docker version`
+      placeholder: |
+        node: v22.x
+        uv: 0.12.18
+        docker: 28.x
+    validations:
+      required: false
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Retrieval backend đang dùng
+      options:
+        - embedded (default)
+        - search-router (production stack)
+        - không biết / không liên quan
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Lệnh/thao tác tối thiểu để tái hiện
+      placeholder: |
+        1. ./scripts/setup.sh
+        2. ./scripts/start.sh
+        3. curl ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Kết quả mong đợi
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Kết quả thực tế
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output liên quan
+      description: Dán phần log liên quan. CHE secrets (key, token, password, DATABASE_URL credential) trước khi dán.
+      render: shell
+    validations:
+      required: false

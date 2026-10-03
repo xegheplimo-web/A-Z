@@ -206,3 +206,7 @@ Ngoài ra `LLM_BASE_URL`/`EMBEDDING_BASE_URL`/`FIRECRAWL_URL` trỏ ra endpoint 
 | `uv sync` báo sai Python | core yêu cầu `>=3.12,<3.14` | `uv python install 3.12` (uv tự quản toolchain) |
 | Port 3000/5432 đã dùng | service khác chiếm port | `start.ps1 -Port 3001` / đổi port trong compose & `DATABASE_URL` |
 | Build `next build` báo thiếu `DATABASE_URL` | build cần biến tồn tại (không cần DB thật) | `.env` từ setup đã có giá trị mặc định; CI dùng DSN dummy |
+
+## Đóng góp
+
+Repo nhận contribution qua fork + Pull Request — xem `CONTRIBUTING.md` (setup, ma trận verify, quy ước branch/commit, required CI checks). Bug → Issue templates; lỗ hổng bảo mật → `SECURITY.md` (private reporting, không public issue). License: Apache-2.0 (`LICENSE`). Quy tắc cộng đồng: `CODE_OF_CONDUCT.md`.
