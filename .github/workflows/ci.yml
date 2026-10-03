@@ -255,7 +255,7 @@ jobs:
           npm run test:e2e:production -- --degraded-only
       - name: Upload production benchmark
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: production-local1-report
           path: reports/production-local1-ci.json
