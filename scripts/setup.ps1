@@ -110,7 +110,7 @@ else {
 
 # ----------------------------------------------------------------- npm ci ---
 Info "Installing Node.js dependencies (npm ci)"
-npm ci
+npm ci --ignore-scripts
 if ($LASTEXITCODE -ne 0) { Die "npm ci failed" }
 Ok "node_modules installed from package-lock.json"
 
@@ -142,10 +142,10 @@ if ($Production) {
     }
   }
   if ($dbReady) {
-    npx drizzle-kit push
+    npx --no-install drizzle-kit push
     if ($LASTEXITCODE -ne 0) { Die "drizzle-kit push failed" }
     Ok "facade schema pushed"
-    npx tsx src/db/seed.ts
+    npx --no-install tsx src/db/seed.ts
     if ($LASTEXITCODE -ne 0) { Die "seed failed" }
     Ok "embedded reference dataset seeded"
   }

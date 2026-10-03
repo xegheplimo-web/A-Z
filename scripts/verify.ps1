@@ -95,7 +95,7 @@ try {
     }
     Step 'production build (next build)' { npm run build }
   }
-  Step 'Python -> TypeScript contract decode' { npx tsx scripts/test-core-port.ts }
+  Step 'Python -> TypeScript contract decode' { npx --no-install tsx scripts/test-core-port.ts }
 
   # ------------------------------------------------------------- DB group ---
   $dbReady = $false
@@ -124,8 +124,8 @@ try {
     $script:Results.Add([pscustomobject]@{ Step = 'DB-backed tests'; Status = 'SKIP (no database reachable)' })
   } elseif ($dbReady) {
     Step 'conformance (reference backend)'       { npm run test:conformance }
-    Step 'smoke upstreams'                       { npx tsx scripts/smoke-upstreams.ts }
-    Step 'auth'                                  { npx tsx scripts/test-auth.ts }
+    Step 'smoke upstreams'                       { npx --no-install tsx scripts/smoke-upstreams.ts }
+    Step 'auth'                                  { npx --no-install tsx scripts/test-auth.ts }
     Step 'bad-search review workflow'            { npm run test:bad-search-review }
     Step 'golden promotion'                      { npm run test:golden }
   }
