@@ -64,19 +64,19 @@ Mọi feature chỉ được thêm nếu giúp ít nhất một trong bốn th�
 | `npx tsx scripts/smoke-upstreams.ts` | LLM gateway (retry/timeout/breaker/stream/usage thật) + lane web của engine embedded |
 | `npx tsx scripts/test-auth.ts` | API key hash · rate limit/quota/usage ở Postgres · MCP session stateless |
 | `npx tsx scripts/bench-scale.ts` | engine tham chiếu ở 150k places + 60k docs: latency, index, chất lượng dưới nhiễu |
-| `POST /v1/eval/run` | benchmark VN_GOLDEN (59 case) qua backend đang chọn |
+| `POST /v1/eval/run` | benchmark VN_GOLDEN (64 case) qua backend đang chọn |
 
 ## Kiến trúc đã hiện thực trong repo này (`vietscope-1`)
 
 ```
 model = "vietscope-1"  →  VietScopeModel (src/lib/model.ts)
-  understand (src/lib/understand.ts, deterministic: dấu/không dấu, địa danh cũ→mới, chuyên ngành)
-  → budget FAST | STANDARD | RESEARCH (src/lib/budget.ts, tự chọn, không lộ ra ngoài)
-  → retrieve song song: canonical places · corpus · search-hub (src/lib/federation.ts)
+  understand (src/engine/embedded/understand.ts, deterministic: dấu/không dấu, địa danh cũ→mới, chuyên ngành)
+  → budget FAST | STANDARD | RESEARCH (src/engine/embedded/budget.ts, tự chọn, không lộ ra ngoài)
+  → retrieve song song: canonical places · corpus · search-hub (src/engine/embedded/federation.ts)
   → progressive widening (canonical thiếu → web) + flywheel (ứng viên → place_candidates)
   → normalize → dedup URL → RRF → (multi-hop cho RESEARCH)
   → synthesize: Inference Engine LLM (src/lib/inference.ts) hoặc extractive (src/lib/answer.ts)
-  → verify (src/lib/evidence.ts) → trace (src/lib/traces.ts) + coverage gap (src/lib/coverage.ts)
+  → verify (src/lib/evidence.ts) → trace (src/lib/traces.ts) + coverage gap (src/engine/embedded/coverage.ts)
   → quality gate: confidence · coverage · independent_sources
 ```
 
