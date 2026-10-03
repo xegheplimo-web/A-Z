@@ -640,6 +640,6 @@ class UnifiedRetriever:
         if req.get("record", True):
             try:
                 await record_coverage(result)
-            except Exception:  # noqa: BLE001 — telemetry never fails search
+            except Exception:  # telemetry never fails search
                 logger.warning("coverage signal write failed", exc_info=True)
         return result
