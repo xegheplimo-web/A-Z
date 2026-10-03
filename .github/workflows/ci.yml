@@ -65,7 +65,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version-file: services/search-router/pyproject.toml
           enable-cache: true
@@ -96,18 +96,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - name: File & dependency hygiene (knip)
-        run: npx knip --include files,dependencies,devDependencies,unlisted,binaries,duplicates
+        run: npx --no-install knip --include files,dependencies,devDependencies,unlisted,binaries,duplicates
       - name: Dead-code report (advisory — exports/types)
         continue-on-error: true
-        run: npx knip
+        run: npx --no-install knip
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
       - name: Audit dev dependencies (advisory)
         continue-on-error: true
         run: npm audit --audit-level=high
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version-file: services/search-router/pyproject.toml
       - name: Audit Python dependencies (advisory)

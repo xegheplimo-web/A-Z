@@ -68,7 +68,7 @@ else
   fi
   step 'production build (next build)' npm run build
 fi
-step 'Python -> TypeScript contract decode' npx tsx scripts/test-core-port.ts
+step 'Python -> TypeScript contract decode' npx --no-install tsx scripts/test-core-port.ts
 
 # ------------------------------------------------------------- DB group ---
 DB_READY=0
@@ -89,8 +89,8 @@ if [ "$DB_READY" -eq 0 ] && [ "$SKIP_DB" -eq 0 ]; then
   RESULTS+=("SKIP  DB-backed tests (no database reachable)")
 elif [ "$DB_READY" -eq 1 ]; then
   step 'conformance (reference backend)' npm run test:conformance
-  step 'smoke upstreams'                 npx tsx scripts/smoke-upstreams.ts
-  step 'auth'                            npx tsx scripts/test-auth.ts
+  step 'smoke upstreams'                 npx --no-install tsx scripts/smoke-upstreams.ts
+  step 'auth'                            npx --no-install tsx scripts/test-auth.ts
   step 'bad-search review workflow'      npm run test:bad-search-review
   step 'golden promotion'                npm run test:golden
 fi

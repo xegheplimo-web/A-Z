@@ -69,7 +69,7 @@ if [ -f .env ]; then ok ".env already exists - left untouched"
 else cp .env.example .env; ok "created .env from .env.example - review it before production use"; fi
 
 info "Installing Node.js dependencies (npm ci)"
-npm ci
+npm ci --ignore-scripts
 ok "node_modules installed from package-lock.json"
 
 if [ "$PRODUCTION" -eq 1 ]; then
@@ -106,8 +106,8 @@ else
     fi
   fi
   if [ "$DB_READY" -eq 1 ]; then
-    npx drizzle-kit push && ok "facade schema pushed"
-    npx tsx src/db/seed.ts && ok "embedded reference dataset seeded"
+    npx --no-install drizzle-kit push && ok "facade schema pushed"
+    npx --no-install tsx src/db/seed.ts && ok "embedded reference dataset seeded"
   fi
 fi
 
