@@ -148,3 +148,7 @@ curl -X POST localhost:3000/v1/responses -H 'content-type: application/json' \
 - Python → TypeScript contract: `npx tsx scripts/test-core-port.ts` sau Python tests.
 
 Không auto-seed/reset DB khi truy cập UI. Cần áp schema mới bằng `npx drizzle-kit push`; dữ liệu pilot là nguồn người vận hành cung cấp, không crawler tự động. Chi tiết giới hạn và provenance trong `docs/PILOT-YEN-DUNG.md`.
+
+## Đóng góp
+
+Repo nhận contribution qua fork + Pull Request — xem `CONTRIBUTING.md` (setup, ma trận verify, quy ước branch/commit, required CI checks). Bug → Issue templates; lỗ hổng bảo mật → `SECURITY.md` (private reporting, không public issue). License: Apache-2.0 (`LICENSE`). Quy tắc cộng đồng: `CODE_OF_CONDUCT.md`.
