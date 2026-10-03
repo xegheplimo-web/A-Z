@@ -15,7 +15,10 @@
     "telemetry:retention": "tsx scripts/telemetry-retention.ts",
     "test:retention": "tsx scripts/test-telemetry-retention.ts",
     "test:bad-search-review": "tsx scripts/test-bad-search-review.ts",
-    "test:golden": "tsx scripts/test-golden-promotion.ts"
+    "test:golden": "tsx scripts/test-golden-promotion.ts",
+    "knip": "knip",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -38,6 +41,7 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
+    "knip": "6.39.0",
     "postcss": "8.5.28",
     "prettier": "^3.9.9",
     "tailwindcss": "4.1.17",

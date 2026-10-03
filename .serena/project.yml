@@ -39,6 +39,7 @@ project_name: "A-Z"
 # The first language server is the default language and the respective language server will be used as a fallback.
 # Note that when using the JetBrains backend, language servers are not used and this list is correspondingly ignored.
 language_servers:
+- typescript
 - python
 
 # the encoding used by text files in the project

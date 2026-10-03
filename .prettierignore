@@ -1,0 +1,38 @@
+# Build output & caches
+.next/
+out/
+build/
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Machine-specific agent/tool dirs
+.kilo/
+.kilocode/
+.serena/cache/
+.serena/project.local.yml
+.devin/mcp_config.local.json
+
+# Local data & env
+data/
+.env
+.env.*
+
+# Python environments & caches
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+
+# Vendored upstream snapshot — keep byte-faithful
+upstream/
+
+# Frozen baseline artifacts (generated contract fixtures, not hand sources)
+services/baseline/
+
+# Generated data seeds / index mappings / test fixtures — keep byte-faithful
+services/search-router/db/seeds/
+services/search-router/opensearch/mappings/
+services/search-router/tests/fixtures/
+
+# Generated evidence reports (produced by scripts, not hand sources)
+reports/*.json

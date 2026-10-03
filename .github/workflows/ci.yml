@@ -88,6 +88,35 @@ jobs:
           npm ci
           npx tsx scripts/test-core-port.ts
 
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: File & dependency hygiene (knip)
+        run: npx knip --include files,dependencies,devDependencies,unlisted,binaries,duplicates
+      - name: Dead-code report (advisory — exports/types)
+        continue-on-error: true
+        run: npx knip
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit dev dependencies (advisory)
+        continue-on-error: true
+        run: npm audit --audit-level=high
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version-file: services/search-router/pyproject.toml
+      - name: Audit Python dependencies (advisory)
+        continue-on-error: true
+        working-directory: services/search-router
+        run: |
+          uv export --frozen --no-dev --no-extra ml --format requirements-txt -o requirements.txt
+          uvx pip-audit -r requirements.txt
+
   test:
     runs-on: ubuntu-latest
     needs: [lint, typecheck, build]
