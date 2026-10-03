@@ -152,10 +152,10 @@ export default async function OpsQualityPage({ searchParams }: { searchParams: P
                                   />
                                 </label>
                                 <div className="grid grid-cols-2 gap-1.5">
-                                  <button name="status" value="confirmed_bad" className="rounded-lg border border-flame/30 px-2 py-1.5 text-[10.5px] text-flame-2">Xác nhận lỗi</button>
-                                  <button name="status" value="reviewed_good" className="rounded-lg border border-jade/30 px-2 py-1.5 text-[10.5px] text-jade">Không lỗi</button>
-                                  <button name="status" value="ignored" className="rounded-lg border border-line px-2 py-1.5 text-[10.5px] text-fog">Bỏ qua</button>
-                                  <button name="status" value="open" className="rounded-lg border border-line px-2 py-1.5 text-[10.5px] text-fog">Mở lại</button>
+                                  <button type="submit" name="status" value="confirmed_bad" className="rounded-lg border border-flame/30 px-2 py-1.5 text-[10.5px] text-flame-2">Xác nhận lỗi</button>
+                                  <button type="submit" name="status" value="reviewed_good" className="rounded-lg border border-jade/30 px-2 py-1.5 text-[10.5px] text-jade">Không lỗi</button>
+                                  <button type="submit" name="status" value="ignored" className="rounded-lg border border-line px-2 py-1.5 text-[10.5px] text-fog">Bỏ qua</button>
+                                  <button type="submit" name="status" value="open" className="rounded-lg border border-line px-2 py-1.5 text-[10.5px] text-fog">Mở lại</button>
                                 </div>
                               </form>
                             </div>
