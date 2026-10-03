@@ -1,0 +1,5 @@
+# Toolchain versions — `mise install` để có đúng runtime CI đang dùng.
+[tools]
+node = "22"
+python = "3.12"
+uv = "0.12.18"

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/xegheplimo-web/A-Z/security/advisories/new
+    about: Lỗ hổng bảo mật — KHÔNG mở public issue, report riêng tại đây (xem SECURITY.md)
+  - name: Tài liệu dự án
+    url: https://github.com/xegheplimo-web/A-Z/tree/main/docs
+    about: Retrieval contract, porting notes, production gate — đọc trước khi hỏi

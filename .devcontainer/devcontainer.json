@@ -1,0 +1,29 @@
+{
+  "name": "VietScope (A-Z)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.12" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [3000, 8888],
+  "postCreateCommand": "bash -c 'curl -LsSf https://astral.sh/uv/0.12.18/install.sh | sh && export PATH=$HOME/.local/bin:$PATH && npm ci && cd services/search-router && uv sync --frozen'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-github-actions"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  }
+}
