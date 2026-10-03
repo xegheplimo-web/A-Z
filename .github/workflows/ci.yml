@@ -128,6 +128,8 @@ jobs:
         run: npx tsx scripts/test-auth.ts
       - name: Bad-search review workflow test
         run: npm run test:bad-search-review
+      - name: Golden promotion test
+        run: npm run test:golden
 
   e2e:
     runs-on: ubuntu-latest

@@ -132,6 +132,15 @@ export default async function OpsQualityPage({ searchParams }: { searchParams: P
                       <td className={`py-2 pr-2 text-[11px] font-semibold ${statusClass}`}>{statusLabel}</td>
                       <td className="num-tabular py-2 pr-2 text-right font-bold text-flame-2">{b.score}</td>
                       <td className="py-2 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                        {b.reviewStatus === "confirmed_bad" && (
+                          <form method="post" action="/ops/golden/actions" className="inline">
+                            <input type="hidden" name="op" value="create" />
+                            <input type="hidden" name="query" value={b.query} />
+                            <input type="hidden" name="back" value="quality" />
+                            <button type="submit" className="rounded-lg border border-gold/40 px-2 py-1 text-[10.5px] font-semibold text-gold">→ Golden</button>
+                          </form>
+                        )}
                         {b.reviewStatus === "promoted_to_golden" ? (
                           <span className="text-[10.5px] text-gold">Đã khóa</span>
                         ) : (
@@ -161,6 +170,7 @@ export default async function OpsQualityPage({ searchParams }: { searchParams: P
                             </div>
                           </details>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );

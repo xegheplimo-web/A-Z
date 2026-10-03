@@ -237,6 +237,58 @@ export const badSearchReviews = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Golden Candidates — P-LEARNING-6: confirmed_bad review → human-labeled
+// benchmark case. Versioned: sửa = version mới + supersedes, không overwrite.
+// evidence_snapshot giữ evidence tối thiểu vì trace JSONB bị retention drop.
+// ---------------------------------------------------------------------------
+export const goldenCandidates = pgTable(
+  "golden_candidates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    reviewId: uuid("review_id"), // provenance → bad_search_reviews.id
+    traceId: uuid("trace_id"),   // trace gốc lúc phát hiện (có thể đã retention-purge)
+    querySafe: text("query_safe").notNull(),
+    version: integer("version").notNull().default(1),
+    supersedesId: uuid("supersedes_id"), // → case cũ bị thay thế (self-ref)
+    status: text("status").notNull().default("draft"), // draft|labeled|approved|promoted|superseded
+    evidenceSnapshot: jsonb("evidence_snapshot"), // intent/scope/results/coverage lúc tạo
+    // --- human labels (P6: chỉ người mới ghi, telemetry chỉ đề cử) ---
+    intent: text("intent"),
+    geoScope: jsonb("geo_scope"),              // {admin_ids: string[]}
+    specialty: text("specialty"),
+    expectedEntities: jsonb("expected_entities"),   // string[] tên/id mong đợi
+    relevanceLabels: jsonb("relevance_labels"),     // {result_id: 0..3}
+    freshnessRequirement: text("freshness_requirement"), // static|slow|medium|high|realtime|current
+    authorityRequirement: text("authority_requirement"), // vd corroborated_or_better
+    abstentionExpected: boolean("abstention_expected").notNull().default(false),
+    reviewNote: text("review_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    labeledAt: timestamp("labeled_at", { withTimezone: true }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    promotedAt: timestamp("promoted_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("golden_candidates_status_idx").on(t.status, t.updatedAt),
+    index("golden_candidates_query_idx").on(t.querySafe),
+  ],
+);
+
+// Append-only audit — KHÔNG UPDATE/DELETE; một lần ghi một lần đọc.
+export const goldenCandidateEvents = pgTable(
+  "golden_candidate_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    candidateId: uuid("candidate_id").notNull(), // → golden_candidates.id
+    eventType: text("event_type").notNull(), // candidate_created|labeled|approved|promoted|superseded
+    actor: text("actor").notNull().default("ops"),
+    payload: jsonb("payload"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("golden_events_candidate_idx").on(t.candidateId, t.createdAt)],
+);
+
+// ---------------------------------------------------------------------------
 // Eval Runs — benchmark VietScope (tài sản đo lường chất lượng)
 // ---------------------------------------------------------------------------
 export const evalRuns = pgTable("eval_runs", {
@@ -303,6 +355,8 @@ export type CoverageGap = typeof coverageGaps.$inferSelect;
 export type FeedbackRow = typeof feedback.$inferSelect;
 export type SearchTrace = typeof searchTraces.$inferSelect;
 export type BadSearchReviewRow = typeof badSearchReviews.$inferSelect;
+export type GoldenCandidateRow = typeof goldenCandidates.$inferSelect;
+export type GoldenCandidateEventRow = typeof goldenCandidateEvents.$inferSelect;
 
 // Immutable observations: revisions append a new row, never overwrite the source payload.
 export const placeObservations = pgTable("place_observations", {
