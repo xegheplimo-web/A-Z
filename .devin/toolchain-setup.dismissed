@@ -1,0 +1,4 @@
+Toolchain setup already completed 2026-10-02 (see toolchain-setup.json).
+vitest intentionally skipped: project uses tsx conformance scripts (scripts/conformance.ts,
+test-auth.ts, test-pilot.ts, smoke-upstreams.ts) and Python pytest under services/search-router/.
+No JS unit-test runner is part of the project convention.

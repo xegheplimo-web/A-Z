@@ -96,3 +96,76 @@ def test_non_local_zero_docs():
 def test_iso_week_format():
     assert iso_week(date(2026, 1, 1)) == "2026-W01"
     assert iso_week(date(2025, 12, 29)) == "2026-W01"  # ISO week boundaries
+
+
+# --- record=false guard (P-LEARNING-4.1) -------------------------------------
+# Benchmark/test traffic sends record:false — it must not inflate real
+# demand signals, and a coverage-DB failure must never fail the search.
+
+import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import core.unified_retrieve as ur
+from api import v1
+from core.unified_retrieve import ExistingCoreServices, UnifiedRetriever
+
+
+def _stubbed_services(monkeypatch):
+    original = v1._get_orchestrator()
+
+    class PlaceService:
+        async def search(self, **kwargs):
+            return [], SimpleNamespace(degraded=False)
+
+    monkeypatch.setattr(v1, "_get_places_service", lambda: PlaceService())
+
+    async def no_web(*args, **kwargs):
+        return []
+
+    monkeypatch.setattr(original, "_search_query", no_web)
+    monkeypatch.setattr(v1, "_get_orchestrator", lambda: original)
+    monkeypatch.setattr(
+        v1,
+        "_hybrid_retrieve",
+        lambda q: None
+        or SimpleNamespace(degraded=False, to_source_results=lambda top_n: []),
+    )
+
+    services = ExistingCoreServices()
+
+    async def no_anchor(q):
+        return None
+
+    monkeypatch.setattr(services, "anchor", no_anchor)
+    return services
+
+
+def test_record_false_skips_coverage_write(monkeypatch):
+    services = _stubbed_services(monkeypatch)
+    spy = AsyncMock(return_value=True)
+    monkeypatch.setattr(ur, "record_coverage", spy)
+    r = asyncio.run(
+        UnifiedRetriever(services).retrieve(
+            {"query": "nhà thuốc gần Neo", "record": False}
+        )
+    )
+    assert r["backend"] == "search-router"
+    spy.assert_not_awaited()
+
+
+def test_record_default_writes_once(monkeypatch):
+    services = _stubbed_services(monkeypatch)
+    spy = AsyncMock(return_value=True)
+    monkeypatch.setattr(ur, "record_coverage", spy)
+    asyncio.run(UnifiedRetriever(services).retrieve({"query": "nhà thuốc gần Neo"}))
+    assert spy.await_count == 1
+
+
+def test_coverage_db_error_never_fails_search(monkeypatch):
+    services = _stubbed_services(monkeypatch)
+    monkeypatch.setattr(
+        ur, "record_coverage", AsyncMock(side_effect=RuntimeError("db down"))
+    )
+    r = asyncio.run(UnifiedRetriever(services).retrieve({"query": "nhà thuốc gần Neo"}))
+    assert r["backend"] == "search-router"

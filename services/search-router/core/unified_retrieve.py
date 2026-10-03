@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import math
 import re
 import time
@@ -19,6 +20,8 @@ from urllib.parse import urlsplit
 from core.coverage import record_coverage
 from core.entity_resolver import fold
 from core.local_discovery import extract_specialty, locality_of
+
+logger = logging.getLogger(__name__)
 
 
 def plain(value: Any) -> Any:
@@ -632,6 +635,11 @@ class UnifiedRetriever:
         }
         # P-LEARNING-3 — production coverage persistence: demand × gap folds
         # into coverage_signals inside this brain (facade stays read-only on
-        # retrieval data). Best-effort, awaited (~1 upsert, negligible).
-        await record_coverage(result)
+        # retrieval data). Contract `record:false` opts out — benchmark/test
+        # traffic must not inflate real demand signals. Best-effort write.
+        if req.get("record", True):
+            try:
+                await record_coverage(result)
+            except Exception:  # noqa: BLE001 — telemetry never fails search
+                logger.warning("coverage signal write failed", exc_info=True)
         return result

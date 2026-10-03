@@ -3,6 +3,8 @@
 // không phải dữ liệu thô. Coverage gaps đến từ retrieval brain qua facade
 // capability — embedded backend hiển thị coverage_gaps nội bộ tương đương.
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { opsAccessOk } from "@/lib/ops";
 import { qualityReport } from "@/lib/quality";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +20,7 @@ const pct = (v: number | null) => (v == null ? "—" : `${v}%`);
 const ms = (v: number | null) => (v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(1)}s` : `${Math.round(v)}ms`);
 
 export default async function OpsQualityPage({ searchParams }: { searchParams: Promise<{ h?: string }> }) {
+  if (!(await opsAccessOk())) notFound(); // 404 — không lộ ops surface
   const { h } = await searchParams;
   const hours = [24, 168, 720].includes(Number(h)) ? Number(h) : 24;
   const r = await qualityReport(hours);

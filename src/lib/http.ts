@@ -28,7 +28,10 @@ export function parseBody(raw: Record<string, unknown>, defaultMode: ModeInput =
   const mode = (typeof raw.mode === "string" ? raw.mode : defaultMode) as ModeInput;
   const max = num(raw.max_results);
   const ev = raw.evidence === "off" || raw.evidence === "full" ? raw.evidence : "auto";
-  return { query: q, opts: { mode, location: parseLocation(raw), maxResults: max ?? undefined }, evidence: ev, raw };
+  // Retrieval Contract `record:false` (alias `log`) — benchmark/test không
+  // ghi trace/coverage vào demand thật. Mặc định record.
+  const noRecord = raw.record === false || raw.record === "false" || raw.log === false;
+  return { query: q, opts: { mode, location: parseLocation(raw), maxResults: max ?? undefined, log: noRecord ? false : undefined }, evidence: ev, raw };
 }
 
 export function parseGet(req: NextRequest): ParsedRequest {
@@ -39,6 +42,7 @@ export function parseGet(req: NextRequest): ParsedRequest {
     lat: sp.get("lat"),
     lon: sp.get("lon") ?? sp.get("lng"),
     max_results: sp.get("limit") ?? sp.get("max_results"),
+    record: sp.get("record"),
   });
 }
 

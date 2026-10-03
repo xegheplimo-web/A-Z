@@ -121,13 +121,27 @@ export function InteractionProbe({
       if (!el) return;
       const kind = el.getAttribute("data-track");
       if (!kind) return;
-      post(traceId, [
-        {
-          kind,
-          result_id: el.getAttribute("data-result-id") ?? undefined,
-          rank: el.getAttribute("data-rank") ? Number(el.getAttribute("data-rank")) : undefined,
-        },
-      ]);
+      const events: EventBody[] = [];
+      // click ⇒ impression: user có thể click trước khi timer 400ms kịp ghi
+      // (navigation xảy ra trước). Flush impression ngay nếu chưa có —
+      // analytics union cũng chuẩn hóa, đây là để không mất event.
+      const impEl = el.hasAttribute("data-imp") ? el : el.closest("[data-imp]");
+      const impId = impEl?.getAttribute("data-result-id") ?? el.getAttribute("data-result-id");
+      if (impId && wanted.has(impId) && !seen.has(impId)) {
+        seen.add(impId);
+        if (impEl && pending.has(impEl)) {
+          window.clearTimeout(pending.get(impEl));
+          pending.delete(impEl);
+          io.unobserve(impEl);
+        }
+        events.push({ kind: "impression", result_id: impId, rank: wanted.get(impId) });
+      }
+      events.push({
+        kind,
+        result_id: el.getAttribute("data-result-id") ?? undefined,
+        rank: el.getAttribute("data-rank") ? Number(el.getAttribute("data-rank")) : undefined,
+      });
+      post(traceId, events);
     };
     document.addEventListener("click", onClick, { capture: true });
     return () => {
