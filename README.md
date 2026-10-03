@@ -25,6 +25,28 @@ Facade (repo này)  ──  Retrieval Contract v1  ──►  Retrieval brain: s
 
 ## Tải về + chạy lại từ đầu (máy mới, 5 phút)
 
+### Cách 0 — script một lệnh (khuyến nghị cho máy mới)
+
+```powershell
+# Windows (PowerShell)
+git clone https://github.com/xegheplimo-web/A-Z.git
+cd A-Z
+.\scripts\setup.ps1     # kiểm tra prereqs → .env → npm ci → Postgres (Docker) → schema+seed → uv sync
+.\scripts\verify.ps1    # lint · typecheck · boundaries · build · contract + DB + Python suites
+.\scripts\start.ps1     # bảo đảm db up → build nếu thiếu → next start :3000
+```
+
+```bash
+# Linux / macOS
+git clone https://github.com/xegheplimo-web/A-Z.git
+cd A-Z
+./scripts/setup.sh      # flags: --skip-python --skip-docker --production
+./scripts/verify.sh     # flags: --skip-python --skip-db --skip-build
+./scripts/start.sh      # flags: --dev --port 3001 --production --skip-docker
+```
+
+`setup` làm đúng các bước thủ công ở Cách 1/2 bên dưới: tạo `.env` từ `.env.example` (không ghi đè), `npm ci`, dựng Postgres `postgres:16` bằng Docker (hoặc dùng `DATABASE_URL` sẵn có), `drizzle-kit push` + seed, và `uv sync --frozen` cho Python core khi có `uv`. `setup --production` / `start --production` dựng toàn bộ stack retrieval như Cách 1b.
+
 ### Cách 1 — Docker embedded (dev/reference)
 
 ```bash
@@ -148,6 +170,42 @@ curl -X POST localhost:3000/v1/responses -H 'content-type: application/json' \
 - Python → TypeScript contract: `npx tsx scripts/test-core-port.ts` sau Python tests.
 
 Không auto-seed/reset DB khi truy cập UI. Cần áp schema mới bằng `npx drizzle-kit push`; dữ liệu pilot là nguồn người vận hành cung cấp, không crawler tự động. Chi tiết giới hạn và provenance trong `docs/PILOT-YEN-DUNG.md`.
+
+## Ports
+
+| Port | Service | Exposed | Ghi chú |
+|---|---|---|---|
+| `3000` | facade Next.js | host | UI + `/v1/*` API + `/api/health` |
+| `5432` | facade Postgres (`postgres:16-alpine`) | host (dev compose) | `DATABASE_URL`, schema drizzle `src/db/schema.ts` |
+| `8888` | search-router core | `127.0.0.1` only (production profile) | Retrieval Contract v1 `/v1/retrieve`, health `/v1/health` |
+| `5432` (internal) | search-db PostGIS | compose network only | brain DB riêng, migrations `services/search-router/db/migrations/` |
+| `6379` | Redis | internal | cache/queue của brain + SearXNG (db 1) |
+| `9200` | OpenSearch | internal | BM25 places/web; cần `vm.max_map_count>=262144` trên Linux host |
+| `6333/6334` | Qdrant | internal | dense lane (opt-in `QDRANT_DENSE_ENABLED`) |
+| `8080` | SearXNG | internal | live-web provider, settings `deploy/searxng/settings.yml` |
+
+Ngoài ra `LLM_BASE_URL`/`EMBEDDING_BASE_URL`/`FIRECRAWL_URL` trỏ ra endpoint ngoài tuỳ cấu hình.
+
+## Production deployment
+
+- CI (`.github/workflows/ci.yml`): lint · typecheck · build · compose-contract · python-core (ruff/pyright/pytest + fixture decode) · hygiene (knip + npm audit + pip-audit) · test (DB) · e2e embedded · production-retrieval-e2e (full stack).
+- CD (`.github/workflows/cd.yml`) trên `main`: build image → `ghcr.io/<repo>:{latest,sha}` → SSH deploy (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY` secrets) chạy `docker compose up -d app` trên server `/opt/vietscope`.
+- Tự deploy: build image từ `Dockerfile` gốc (facade) + `services/search-router/Dockerfile` (core), chạy bằng `docker-compose.yml` + `docker-compose.production.yml --profile production` như Cách 1b; bắt buộc `RETRIEVAL_BACKEND=search-router`, `RETRIEVAL_FALLBACK` rỗng, secrets qua env.
+- Telemetry retention chạy định kỳ ~03:30 hằng ngày: `npm run telemetry:retention` (single-run, advisory lock).
+
+## Troubleshooting
+
+| Triệu chứng | Nguyên nhân thường gặp | Cách xử lý |
+|---|---|---|
+| `npm ci` lỗi lockfile | `package.json`/`package-lock.json` lệch | không sửa tay lock — chạy `npm install` để regenerate rồi review diff |
+| `drizzle-kit push`/seed báo connect | Postgres chưa lên hoặc `DATABASE_URL` sai | `docker compose up -d db` hoặc sửa `DATABASE_URL` trong `.env` |
+| `/v1/*` trả 503 khi `RETRIEVAL_BACKEND=search-router` | core chưa chạy/`SEARCH_ROUTER_URL` sai | đây là hành vi fail-closed cố ý; kiểm tra `http://127.0.0.1:8888/v1/health` |
+| `/ops/*` từ chối từ xa | `VIETSCOPE_ADMIN_KEY` rỗng → chỉ mở mạng nội bộ | đặt `VIETSCOPE_ADMIN_KEY` (openssl rand -hex 32), mở `/ops/auth` |
+| Rate-limit gom chung bucket `anon` | `TRUST_PROXY_HEADERS` tắt | chỉ bật khi reverse proxy overwrite `X-Forwarded-For` |
+| OpenSearch không healthy trong production stack | `vm.max_map_count` thấp (Linux) | `sudo sysctl -w vm.max_map_count=262144` |
+| `uv sync` báo sai Python | core yêu cầu `>=3.12,<3.14` | `uv python install 3.12` (uv tự quản toolchain) |
+| Port 3000/5432 đã dùng | service khác chiếm port | `start.ps1 -Port 3001` / đổi port trong compose & `DATABASE_URL` |
+| Build `next build` báo thiếu `DATABASE_URL` | build cần biến tồn tại (không cần DB thật) | `.env` từ setup đã có giá trị mặc định; CI dùng DSN dummy |
 
 ## Đóng góp
 

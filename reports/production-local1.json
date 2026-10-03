@@ -1,0 +1,86 @@
+{
+  "created_at": "2026-10-02T21:18:04.764Z",
+  "live": true,
+  "fixture_only": false,
+  "target": "http://127.0.0.1:13000",
+  "mode": "live-quality",
+  "metrics": {
+    "backend": "search-router",
+    "runs_per_query": 10,
+    "queries": 5,
+    "returned_places": 0,
+    "specialty_precision_at_10": 0,
+    "generic_noise_rate": 1,
+    "outside_area_rate": 1,
+    "local_widened_core_p95_ms": 1757,
+    "wall_p95_ms": 1778,
+    "contract_errors": 0
+  },
+  "checks": {
+    "contract_errors_zero": true,
+    "production_backend": true,
+    "local_widened_p95_lte_5s": true,
+    "live_results_present": false,
+    "specialty_precision_at_10_gte_080": false,
+    "generic_noise_lt_010": false,
+    "outside_area_lt_005": false
+  },
+  "queries": [
+    {
+      "query": "quán giò chả Yên Dũng",
+      "expected_specialty": "giò chả",
+      "actual_specialty": "giò chả",
+      "results": [],
+      "relevant": 0,
+      "outside_area": 0,
+      "core_p95_ms": 1544,
+      "wall_p95_ms": 1565,
+      "error": null
+    },
+    {
+      "query": "quán cafe Yên Dũng Neo",
+      "expected_specialty": "cà phê",
+      "actual_specialty": "cà phê",
+      "results": [],
+      "relevant": 0,
+      "outside_area": 0,
+      "core_p95_ms": 1757,
+      "wall_p95_ms": 1778,
+      "error": null
+    },
+    {
+      "query": "cửa hàng sắt Tân An",
+      "expected_specialty": "sắt thép",
+      "actual_specialty": "sắt thép",
+      "results": [],
+      "relevant": 0,
+      "outside_area": 0,
+      "core_p95_ms": 1512,
+      "wall_p95_ms": 1530,
+      "error": null
+    },
+    {
+      "query": "cửa hàng bách hóa Yên Dũng",
+      "expected_specialty": "tạp hóa",
+      "actual_specialty": "tạp hóa",
+      "results": [],
+      "relevant": 0,
+      "outside_area": 0,
+      "core_p95_ms": 2600,
+      "wall_p95_ms": 2616,
+      "error": null
+    },
+    {
+      "query": "nhà thuốc gần Neo",
+      "expected_specialty": "nhà thuốc",
+      "actual_specialty": "nhà thuốc",
+      "results": [],
+      "relevant": 0,
+      "outside_area": 0,
+      "core_p95_ms": 1991,
+      "wall_p95_ms": 2008,
+      "error": null
+    }
+  ],
+  "note": "Heuristic labels are a P-NEXT gate; replace/extend with independently reviewed VN100 labels before quality claims."
+}

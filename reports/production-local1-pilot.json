@@ -1,0 +1,136 @@
+{
+  "created_at": "2026-10-02T22:30:23.294Z",
+  "live": true,
+  "fixture_only": false,
+  "target": "http://127.0.0.1:13000",
+  "mode": "live-quality",
+  "metrics": {
+    "backend": "search-router",
+    "runs_per_query": 5,
+    "queries": 5,
+    "returned_places": 9,
+    "specialty_precision_at_10": 1,
+    "generic_noise_rate": 0,
+    "outside_area_rate": 0,
+    "local_widened_core_p95_ms": 2599,
+    "wall_p95_ms": 2615,
+    "contract_errors": 0
+  },
+  "checks": {
+    "contract_errors_zero": true,
+    "production_backend": true,
+    "local_widened_p95_lte_5s": true,
+    "live_results_present": true,
+    "specialty_precision_at_10_gte_080": true,
+    "generic_noise_lt_010": true,
+    "outside_area_lt_005": true
+  },
+  "queries": [
+    {
+      "query": "quán giò chả Yên Dũng",
+      "expected_specialty": "giò chả",
+      "actual_specialty": "giò chả",
+      "results": [
+        {
+          "title": "Hộ Kinh Doanh Giò Chả Thúy",
+          "entity": "food",
+          "address": "Chợ Neo, TDP 3, Phường Yên Dũng, Bắc Ninh"
+        }
+      ],
+      "relevant": 1,
+      "outside_area": 0,
+      "core_p95_ms": 2528,
+      "wall_p95_ms": 2556,
+      "error": null
+    },
+    {
+      "query": "quán cafe Yên Dũng Neo",
+      "expected_specialty": "cà phê",
+      "actual_specialty": "cà phê",
+      "results": [
+        {
+          "title": "Cafe Mộc",
+          "entity": "food",
+          "address": "Nham Biền, Phường Yên Dũng, Bắc Ninh"
+        }
+      ],
+      "relevant": 1,
+      "outside_area": 0,
+      "core_p95_ms": 2599,
+      "wall_p95_ms": 2615,
+      "error": null
+    },
+    {
+      "query": "cửa hàng sắt Tân An",
+      "expected_specialty": "sắt thép",
+      "actual_specialty": "sắt thép",
+      "results": [
+        {
+          "title": "Cửa Hàng Đồ Sắt Thanh Tuyết",
+          "entity": "retail",
+          "address": "ĐT299, Tân An, Yên Dũng, Bắc Ninh"
+        }
+      ],
+      "relevant": 1,
+      "outside_area": 0,
+      "core_p95_ms": 2618,
+      "wall_p95_ms": 2636,
+      "error": null
+    },
+    {
+      "query": "cửa hàng bách hóa Yên Dũng",
+      "expected_specialty": "tạp hóa",
+      "actual_specialty": "tạp hóa",
+      "results": [
+        {
+          "title": "Cửa Hàng Tạp Hóa Hải Yến",
+          "entity": "retail",
+          "address": "Nham Biền, Phường Yên Dũng, Bắc Ninh"
+        },
+        {
+          "title": "Cửa Hàng Tạp Hóa Kiên Hà",
+          "entity": "retail",
+          "address": "Nham Biền, Phường Yên Dũng, Bắc Ninh"
+        }
+      ],
+      "relevant": 2,
+      "outside_area": 0,
+      "core_p95_ms": 1510,
+      "wall_p95_ms": 1538,
+      "error": null
+    },
+    {
+      "query": "nhà thuốc gần Neo",
+      "expected_specialty": "nhà thuốc",
+      "actual_specialty": "nhà thuốc",
+      "results": [
+        {
+          "title": "Nhà thuốc Phương Phương",
+          "entity": "health",
+          "address": "Nham Biền, Phường Yên Dũng, Bắc Ninh"
+        },
+        {
+          "title": "Nhà Thuốc YHCT Tâm An",
+          "entity": "health",
+          "address": "Khu đô thị Lạc Phú, Phường Yên Dũng, Bắc Ninh"
+        },
+        {
+          "title": "Quầy Thuốc Trung Tâm",
+          "entity": "health",
+          "address": "Neo, Nham Biền, Phường Yên Dũng, Bắc Ninh"
+        },
+        {
+          "title": "Quầy Thuốc Số 30",
+          "entity": "health",
+          "address": "Kiot 30, Chợ Neo, Tiểu khu 3, Thị trấn Neo, Yên Dũng, Bắc Ninh"
+        }
+      ],
+      "relevant": 4,
+      "outside_area": 0,
+      "core_p95_ms": 1374,
+      "wall_p95_ms": 1397,
+      "error": null
+    }
+  ],
+  "note": "Heuristic labels are a P-NEXT gate; replace/extend with independently reviewed VN100 labels before quality claims."
+}

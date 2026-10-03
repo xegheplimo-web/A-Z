@@ -148,6 +148,81 @@ def test_widening_does_not_invent_places():
     asyncio.run(check())
 
 
+def test_late_night_semantics_and_web_candidates():
+    """P-LOCAL-DISCOVERY-1 — specialty parity + web→candidates flywheel.
+
+    Regression: 'quán ăn đêm tại yên dũng' used to return specialty=null and
+    a hard-coded empty candidates list. Venue-like web evidence must surface
+    as candidates (never exact), with corroboration counted per source.
+    """
+
+    class Venues(Services):
+        def __init__(self):
+            super().__init__(empty=True)
+
+        async def web(self, q, mode, limit):
+            self.calls.append("web")
+            return [
+                {
+                    "source_id": "w1",
+                    "url": "https://foody.vn/quan-nhau-24h-van-trung",
+                    "title": "Quán Nhậu 24h Vân Trung, Tiên Sông, Yên Dũng",
+                    "description": "Quán nhậu mở đến 2h sáng. Địa chỉ: Vân Trung, Tiên Sông, Yên Dũng",
+                },
+                {
+                    "source_id": "w2",
+                    "url": "https://tiktok.com/@review/quan-nhau-van-trung",
+                    "title": "Quán Nhậu 24h Vân Trung, Tiên Sông, Yên Dũng",
+                    "description": "Review quán nhậu ngon ở Vân Trung, Tiên Sông, Yên Dũng",
+                },
+                {
+                    "source_id": "w3",
+                    "url": "https://toplist.vn/an-dem-yen-dung",
+                    "title": "Top 10 quán ăn đêm Yên Dũng",
+                    "description": "Tổng hợp quán ăn đêm ngon nhất Yên Dũng",
+                },
+                {
+                    "source_id": "w4",
+                    "url": "https://example.org/quan-an-ha-noi",
+                    "title": "Quán Ăn Ngon Hà Nội",
+                    "description": "Quán ăn ngon ở Hà Nội",
+                },
+            ], False
+
+    async def check():
+        async with client_for(Venues()) as c:
+            r = await c.post(
+                "/v1/retrieve", json={"query": "quán ăn đêm tại yên dũng"}
+            )
+        assert r.status_code == 200
+        d = r.json()
+        assert d["understanding"]["intent"] == "local_search"
+        assert d["understanding"]["specialty"] == "ăn đêm"
+        assert d["understanding"]["categories"] == ["an-dem"]
+        assert d["places"]["exact"] == []
+        cands = d["places"]["candidates"]
+        assert cands, "web venue evidence must surface as candidates"
+        names = [c["name"] for c in cands]
+        assert any("Vân Trung" in n for n in names)
+        assert not any(n.startswith("Top 10") for n in names)
+        assert not any("Hà Nội" in n for n in names)
+        top = cands[0]
+        assert top["specialty"] == "ăn đêm"
+        assert top["source_url"] and top["evidence"]
+        assert any(
+            c["verification_level"] == "corroborated" for c in cands
+        ), "two independent sources must corroborate"
+        assert all(
+            c["verification_level"] in ("observed", "corroborated") for c in cands
+        )
+        assert any(
+            f["provider"] == "web-extract" and f["status"] == "ok"
+            for f in d["federation"]
+        )
+
+    asyncio.run(check())
+
+
 def test_general_and_provider_failure():
     async def check():
         s = Services(empty=True, fail=True)

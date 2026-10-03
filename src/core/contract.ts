@@ -13,19 +13,45 @@
 // Mọi thứ phía facade chỉ được đọc các kiểu trong file này, không đọc bảng của brain.
 // ---------------------------------------------------------------------------
 
-export const CONTRACT_VERSION = "1";
+export const CONTRACT_VERSION = '1';
 
-export const INTENTS = ["local_search", "legal", "market_price", "weather", "compare", "admin_info", "product", "news", "general"] as const;
+export const INTENTS = [
+  'local_search',
+  'legal',
+  'market_price',
+  'weather',
+  'compare',
+  'admin_info',
+  'product',
+  'news',
+  'general',
+] as const;
 export type Intent = (typeof INTENTS)[number];
 
-export type Budget = "fast" | "standard" | "research";
-export type ModeInput = "auto" | "fast" | "standard" | "balanced" | "research" | "deep" | null | undefined;
-export type SourceType = "law" | "government" | "news" | "community" | "product" | "web";
+export type Budget = 'fast' | 'standard' | 'research';
+export type ModeInput =
+  | 'auto'
+  | 'fast'
+  | 'standard'
+  | 'balanced'
+  | 'research'
+  | 'deep'
+  | null
+  | undefined;
+export type SourceType =
+  'law' | 'government' | 'news' | 'community' | 'product' | 'web';
 
 export interface ProviderStatus {
   provider: string;
   lane: string;
-  status: "ok" | "empty" | "disabled" | "timeout" | "error" | "circuit_open" | "skipped";
+  status:
+    | 'ok'
+    | 'empty'
+    | 'disabled'
+    | 'timeout'
+    | 'error'
+    | 'circuit_open'
+    | 'skipped';
   ms: number;
   count: number;
   detail?: string;
@@ -61,7 +87,7 @@ export interface UnderstandingDTO {
   intentLabel: string;
   specialty: string | null;
   categories: string[];
-  freshness: "today" | "recent" | "any";
+  freshness: 'today' | 'recent' | 'any';
   locations: LocationDTO[];
   /** đơn vị hành chính HIỆN HÀNH sau khi resolve địa danh lịch sử */
   resolvedCurrentIds: string[];
@@ -115,6 +141,11 @@ export interface CandidateDTO {
   sourceUrl: string | null;
   sourceTitle: string | null;
   evidence: string | null;
+  /** P-LOCAL-DISCOVERY-1: corroboration level from independent source count. */
+  verificationLevel?:
+    'observed' | 'corroborated' | 'verified' | 'authoritative' | null;
+  /** P-LOCAL-DISCOVERY-1: phạm vi hành chính candidate được quan sát trong. */
+  adminScope?: string | null;
 }
 
 export interface DocDTO {
@@ -136,7 +167,7 @@ export interface DocDTO {
 export interface QualityDTO {
   /** độ tin cậy của RETRIEVAL (chưa tính verification của câu trả lời) */
   confidence: number;
-  coverage: "good" | "partial" | "none";
+  coverage: 'good' | 'partial' | 'none';
   independentSources: number;
   avgAuthority: number;
 }
@@ -145,7 +176,12 @@ export interface RetrieveResult {
   backend: string;
   understanding: UnderstandingDTO;
   budget: BudgetDTO;
-  places: { exact: PlaceDTO[]; unverified: PlaceDTO[]; related: PlaceDTO[]; candidates: CandidateDTO[] };
+  places: {
+    exact: PlaceDTO[];
+    unverified: PlaceDTO[];
+    related: PlaceDTO[];
+    candidates: CandidateDTO[];
+  };
   docs: DocDTO[];
   coverage: { gap: boolean; reason: string | null; widened: boolean };
   anchor: { lat: number; lng: number; label: string } | null;

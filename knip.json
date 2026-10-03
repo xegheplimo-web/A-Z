@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "scripts/bench-scale.ts",
+    "scripts/local1-pilot.ts",
+    "scripts/pilot-import.ts",
+    "scripts/reference-retrieve-server.ts",
+    "scripts/test-pilot.ts",
+    "scripts/mock-upstreams.d.mts"
+  ]
+}
