@@ -19,14 +19,21 @@
 // ---------------------------------------------------------------------------
 import { db } from "@/db";
 import { badSearchReviews, evalRuns, goldenCandidateEvents, goldenCandidates, searchTraces } from "@/db/schema";
-import { INTENTS } from "@/core/contract";
+import { INTENTS, type RetrieveResult } from "@/core/contract";
 import { analyze } from "@/lib/pipeline";
+import { redactText } from "@/lib/telemetry";
 import { haversineKm, normalize } from "@/lib/vi";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
 export const GOLDEN_STATUSES = ["draft", "labeled", "approved", "promoted", "superseded"] as const;
 export type GoldenStatus = (typeof GOLDEN_STATUSES)[number];
 export const BENCHMARK_STATUSES: readonly GoldenStatus[] = ["approved", "promoted"];
+
+// Hai nguồn vào hợp lệ — sau candidate_created hai đường hoàn toàn giống nhau:
+//   bad_search_review  = failure-derived (review_id bắt buộc, review confirmed_bad)
+//   manual_nomination  = positive control (review_id=null, dry-run record:false)
+export const GOLDEN_SOURCES = ["bad_search_review", "manual_nomination"] as const;
+export type GoldenSource = (typeof GOLDEN_SOURCES)[number];
 
 // ---------------------------------------------------------------------------
 // VN100-0 Label Contract v1 — FROZEN.
@@ -169,6 +176,29 @@ async function emit(candidateId: string, eventType: string, payload?: unknown, a
   await db.insert(goldenCandidateEvents).values({ candidateId, eventType, actor, payload });
 }
 
+/** Snapshot từ retrieval result trực tiếp (dry-run hoặc trace mới nhất còn JSONB). */
+function snapshotFromRetrieval(r: RetrieveResult, extra: Record<string, unknown> = {}) {
+  const top = (bucket: string, arr: { id: string; name: string }[]) =>
+    arr.slice(0, 5).map((p) => ({ id: p.id, name: p.name, bucket }));
+  return {
+    intent: r.understanding.intent,
+    specialty: r.understanding.specialty ?? null,
+    resolved_admin_ids: r.understanding.resolvedCurrentIds,
+    scope: r.scope,
+    anchor: r.anchor,
+    results_total: r.places.exact.length + r.places.unverified.length + r.docs.length,
+    exact_count: r.places.exact.length,
+    coverage_gap: r.coverage.gap,
+    confidence: r.quality.confidence,
+    top_result_ids: [
+      ...top("exact", r.places.exact),
+      ...top("unverified", r.places.unverified),
+      ...top("related", r.places.related),
+    ],
+    ...extra,
+  };
+}
+
 /** Evidence tối thiểu từ trace gần nhất của query — trace JSONB sẽ bị retention drop. */
 async function evidenceSnapshot(querySafe: string) {
   const [t] = await db
@@ -181,25 +211,50 @@ async function evidenceSnapshot(querySafe: string) {
       confidence: searchTraces.confidence,
       latencyMs: searchTraces.latencyMs,
       createdAt: searchTraces.createdAt,
+      trace: searchTraces.trace,
     })
     .from(searchTraces)
     .where(eq(searchTraces.querySafe, querySafe))
     .orderBy(desc(searchTraces.createdAt))
     .limit(1);
   if (!t) return { trace_id: null };
+  // columns luôn sống; trace JSONB có thể đã bị retention purge — lấy thêm nếu còn.
+  const tr = (t.trace ?? null) as {
+    entities?: { resolved_current_ids?: string[] };
+    candidates?: { places_exact?: { id: string; name: string }[]; places_unverified?: { id: string; name: string }[]; places_related?: { id: string; name: string }[] };
+  } | null;
   return {
+    source_kind: "trace" as const,
     trace_id: t.id,
     intent: t.intent,
+    resolved_admin_ids: tr?.entities?.resolved_current_ids ?? null,
     results_total: t.resultsTotal,
     exact_count: t.exactCount,
     coverage_gap: t.coverageGap,
     confidence: t.confidence,
     latency_ms: t.latencyMs,
+    top_result_ids: tr?.candidates
+      ? [
+          ...(tr.candidates.places_exact ?? []).slice(0, 5).map((p) => ({ ...p, bucket: "exact" })),
+          ...(tr.candidates.places_unverified ?? []).slice(0, 5).map((p) => ({ ...p, bucket: "unverified" })),
+          ...(tr.candidates.places_related ?? []).slice(0, 5).map((p) => ({ ...p, bucket: "related" })),
+        ]
+      : null,
     searched_at: t.createdAt?.toISOString?.() ?? null,
   };
 }
 
-/** confirmed_bad → draft candidate. Một query_safe = một candidate đang sống. */
+/** Một query_safe = một candidate đang sống (bất kể source). */
+async function assertNoActiveCandidate(querySafe: string) {
+  const [active] = await db
+    .select({ id: goldenCandidates.id, status: goldenCandidates.status })
+    .from(goldenCandidates)
+    .where(and(eq(goldenCandidates.querySafe, querySafe), inArray(goldenCandidates.status, ["draft", "labeled", "approved", "promoted"])))
+    .limit(1);
+  if (active) throw new Error(`query đã có candidate đang sống (${active.status})`);
+}
+
+/** confirmed_bad → draft candidate. Nguồn failure-derived: review_id bắt buộc. */
 export async function createGoldenCandidate(input: { querySafe: string; actor?: string }) {
   const querySafe = input.querySafe.trim();
   const [review] = await db
@@ -211,17 +266,13 @@ export async function createGoldenCandidate(input: { querySafe: string; actor?: 
   if (review.status !== "confirmed_bad") {
     throw new Error(`review status '${review.status}' không được tạo candidate — chỉ confirmed_bad`);
   }
-  const [active] = await db
-    .select({ id: goldenCandidates.id, status: goldenCandidates.status })
-    .from(goldenCandidates)
-    .where(and(eq(goldenCandidates.querySafe, querySafe), inArray(goldenCandidates.status, ["draft", "labeled", "approved", "promoted"])))
-    .limit(1);
-  if (active) throw new Error(`query đã có candidate đang sống (${active.status})`);
+  await assertNoActiveCandidate(querySafe);
 
   const snap = await evidenceSnapshot(querySafe);
   const [row] = await db
     .insert(goldenCandidates)
     .values({
+      source: "bad_search_review",
       reviewId: review.id,
       traceId: snap.trace_id ?? null,
       querySafe,
@@ -230,7 +281,43 @@ export async function createGoldenCandidate(input: { querySafe: string; actor?: 
       reviewNote: review.note,
     })
     .returning();
-  await emit(row.id, "candidate_created", { review_id: review.id, snapshot: snap }, input.actor);
+  await emit(row.id, "candidate_created", { source: "bad_search_review", review_id: review.id, snapshot: snap }, input.actor);
+  return row;
+}
+
+/** Manual nomination → draft candidate. Positive control: review_id=null.
+ *  Reuse trace gần nhất nếu có; không thì dry-run analyze(log:false) —
+ *  KHÔNG ghi trace/coverage (benchmark traffic không được làm bẩn telemetry). */
+export async function nominateGoldenCandidate(input: { query: string; actor?: string }) {
+  const raw = input.query.trim();
+  if (!raw || raw.length > 500) throw new Error("query trống hoặc quá dài (>500)");
+  const querySafe = redactText(raw, 500);
+  await assertNoActiveCandidate(querySafe);
+
+  const snap = await evidenceSnapshot(querySafe);
+  let finalSnap: Record<string, unknown> & { trace_id: string | null } = snap;
+  if (snap.trace_id == null) {
+    const x = await analyze(raw, { log: false });
+    finalSnap = {
+      source_kind: "dry_run",
+      trace_id: null,
+      latency_ms: Math.round(x.timings.total_ms ?? 0),
+      searched_at: new Date().toISOString(),
+      ...snapshotFromRetrieval(x.retrieval),
+    };
+  }
+  const [row] = await db
+    .insert(goldenCandidates)
+    .values({
+      source: "manual_nomination",
+      reviewId: null,
+      traceId: finalSnap.trace_id ?? null,
+      querySafe,
+      status: "draft",
+      evidenceSnapshot: finalSnap,
+    })
+    .returning();
+  await emit(row.id, "candidate_created", { source: "manual_nomination", snapshot: finalSnap }, input.actor);
   return row;
 }
 
@@ -340,6 +427,7 @@ export async function reviseGoldenCandidate(id: string, input: GoldenLabels, act
   const [row] = await db
     .insert(goldenCandidates)
     .values({
+      source: c.source,
       reviewId: c.reviewId,
       traceId: c.traceId,
       querySafe: c.querySafe,
@@ -378,6 +466,7 @@ export async function exportGoldenBenchmark() {
   return rows.map((c) => ({
     id: c.id,
     version: c.version,
+    source: c.source,
     query: c.querySafe,
     intent: c.intent,
     geo_scope: c.geoScope,

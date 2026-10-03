@@ -14,6 +14,7 @@ import {
   approveGoldenCandidate,
   createGoldenCandidate,
   exportGoldenBenchmark,
+  nominateGoldenCandidate,
   promoteGoldenCandidate,
   reviseGoldenCandidate,
   setGoldenLabels,
@@ -35,7 +36,8 @@ async function main() {
   const q1 = `golden-${randomUUID().slice(0, 8)}`;
   const q2 = `golden-${randomUUID().slice(0, 8)}`;
   const q3 = `golden-${randomUUID().slice(0, 8)}`;
-  const cleanupQueries = [q1, q2, q3].map((q) => redactText(q, 500));
+  const q4 = `golden-nom-${randomUUID().slice(0, 8)}`;
+  const cleanupQueries = [q1, q2, q3, q4].map((q) => redactText(q, 500));
 
   try {
     // --- non-confirmed_bad reviews không được tạo candidate ---
@@ -112,6 +114,36 @@ async function main() {
     const types = events.map((e) => e.eventType);
     assert.ok(types.includes("candidate_created") && types.includes("labeled") && types.includes("approved") && types.includes("promoted") && types.includes("superseded"));
     console.log(`PASS append-only events: ${types.join(" → ")}`);
+
+    // --- manual nomination: positive control, không đụng bad_search_reviews ---
+    const nom = await nominateGoldenCandidate({ query: q4 });
+    assert.equal(nom.status, "draft");
+    assert.equal(nom.source, "manual_nomination");
+    assert.equal(nom.reviewId, null);
+    assert.ok((nom.evidenceSnapshot as { source_kind?: string } | null)?.source_kind === "dry_run", "không trace → dry-run snapshot");
+    assert.equal(nom.traceId, null, "dry-run không được tạo trace giả");
+    await assert.rejects(nominateGoldenCandidate({ query: q4 }), /đã có candidate/);
+    await setGoldenLabels(nom.id, FULL);
+    const nomApproved = await approveGoldenCandidate(nom.id);
+    assert.equal(nomApproved.status, "approved");
+    const nomPromoted = await promoteGoldenCandidate(nom.id);
+    assert.equal(nomPromoted.status, "promoted");
+    const [noReview] = await db.select().from(badSearchReviews).where(eq(badSearchReviews.querySafe, redactText(q4, 500))).limit(1);
+    assert.equal(noReview, undefined, "manual nomination không được tạo/đụng review row");
+    const bench2 = await exportGoldenBenchmark();
+    const nomCase = bench2.find((b) => b.id === nom.id);
+    assert.equal(nomCase?.source, "manual_nomination", "benchmark export phải mang source");
+    const nomEvents = await db.select().from(goldenCandidateEvents).where(eq(goldenCandidateEvents.candidateId, nom.id));
+    const createEvt = nomEvents.find((e) => e.eventType === "candidate_created");
+    assert.equal((createEvt?.payload as { source?: string } | null)?.source, "manual_nomination");
+    console.log("PASS manual nomination → draft → approve → promote, review table untouched");
+
+    // --- revise giữ nguyên source trên version mới ---
+    const nomV2 = await reviseGoldenCandidate(nom.id, { ...FULL, reviewNote: "v2" });
+    assert.equal(nomV2.source, "manual_nomination", "revise phải copy source của version cũ");
+    assert.equal(nomV2.reviewId, null);
+    console.log("PASS revise preserves source across versions");
+
     console.log("all golden promotion assertions passed");
   } finally {
     const cands = await db.select({ id: goldenCandidates.id }).from(goldenCandidates).where(inArray(goldenCandidates.querySafe, cleanupQueries));

@@ -11,6 +11,7 @@ import { opsAccessOk } from "@/lib/ops";
 import {
   approveGoldenCandidate,
   createGoldenCandidate,
+  nominateGoldenCandidate,
   promoteGoldenCandidate,
   reviseGoldenCandidate,
   setGoldenLabels,
@@ -76,6 +77,9 @@ export async function POST(req: Request) {
     switch (op) {
       case "create":
         await createGoldenCandidate({ querySafe: String(form.get("query") ?? "") });
+        break;
+      case "nominate":
+        await nominateGoldenCandidate({ query: String(form.get("query") ?? "") });
         break;
       case "label":
         await setGoldenLabels(String(form.get("id") ?? ""), labelsFrom(form));
