@@ -18,6 +18,7 @@
   - `npx tsx scripts/test-auth.ts`
   - `npx tsx scripts/test-pilot.ts`
   - `npx tsx scripts/test-telemetry-retention.ts` (telemetry retention regression; needs DATABASE_URL)
+  - `npm run test:bad-search-review` (P-LEARNING-5 review-state + redaction regression; needs DATABASE_URL)
 - Telemetry retention (run daily in prod): `npm run telemetry:retention`
 - DB: `npx drizzle-kit push`; seed: `npx tsx src/db/seed.ts`
 - Telemetry retention: `npm run telemetry:retention` (schedule daily ~03:30; advisory-locked, single-run; alert nếu exit≠0). Regression test: `npm run test:retention`

@@ -215,6 +215,28 @@ export const searchInteractions = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Bad Search Reviews — human judgment over the live telemetry-derived queue.
+// Queue scoring stays derived in quality.ts; this table stores ONLY reviewer
+// state. "promoted_to_golden" is reserved for P-LEARNING-6.
+// ---------------------------------------------------------------------------
+export const badSearchReviews = pgTable(
+  "bad_search_reviews",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    querySafe: text("query_safe").notNull(),
+    status: text("status").notNull().default("open"), // open | reviewed_good | confirmed_bad | ignored | promoted_to_golden
+    note: text("note"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("bad_search_reviews_query_idx").on(t.querySafe),
+    index("bad_search_reviews_status_idx").on(t.status, t.updatedAt),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Eval Runs — benchmark VietScope (tài sản đo lường chất lượng)
 // ---------------------------------------------------------------------------
 export const evalRuns = pgTable("eval_runs", {
@@ -280,6 +302,7 @@ export type PlaceCandidate = typeof placeCandidates.$inferSelect;
 export type CoverageGap = typeof coverageGaps.$inferSelect;
 export type FeedbackRow = typeof feedback.$inferSelect;
 export type SearchTrace = typeof searchTraces.$inferSelect;
+export type BadSearchReviewRow = typeof badSearchReviews.$inferSelect;
 
 // Immutable observations: revisions append a new row, never overwrite the source payload.
 export const placeObservations = pgTable("place_observations", {

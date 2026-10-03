@@ -17,8 +17,10 @@
 // lại impression trong edge case.
 // ---------------------------------------------------------------------------
 import { db } from "@/db";
+import { badSearchReviews } from "@/db/schema";
 import { requireCapability } from "@/core/backend";
-import { sql } from "drizzle-orm";
+import type { BadSearchReviewStatus } from "@/lib/bad-search-reviews";
+import { inArray, sql } from "drizzle-orm";
 
 export interface QualityReport {
   windowHours: number;
@@ -45,6 +47,9 @@ export interface BadSearch {
   reformulated: number;
   negativeFeedback: number;
   score: number;
+  reviewStatus: BadSearchReviewStatus;
+  reviewNote: string | null;
+  reviewedAt: string | null;
 }
 
 export async function qualityReport(hours = 24): Promise<QualityReport> {
@@ -147,6 +152,20 @@ export async function qualityReport(hours = 24): Promise<QualityReport> {
   const ra = (reformAgg.rows?.[0] ?? {}) as Record<string, string | null>;
   const fa = (fbAgg.rows?.[0] ?? {}) as Record<string, string | null>;
 
+  const rawBadRows = badRows.rows as Record<string, string>[];
+  const reviewRows = rawBadRows.length
+    ? await db
+        .select({
+          querySafe: badSearchReviews.querySafe,
+          status: badSearchReviews.status,
+          note: badSearchReviews.note,
+          reviewedAt: badSearchReviews.reviewedAt,
+        })
+        .from(badSearchReviews)
+        .where(inArray(badSearchReviews.querySafe, rawBadRows.map((r) => r.query)))
+    : [];
+  const reviewByQuery = new Map(reviewRows.map((r) => [r.querySafe, r]));
+
   const searches = Number(ta.searches ?? 0);
   const localTotal = Number(ta.local_total ?? 0);
   const ctr = (c: string | null, i: string | null) =>
@@ -182,14 +201,20 @@ export async function qualityReport(hours = 24): Promise<QualityReport> {
     coverageGapRate: searches ? Math.round((Number(ta.gaps) / searches) * 1000) / 10 : 0,
     latency: { p50: ta.p50 != null ? Number(ta.p50) : null, p95: ta.p95 != null ? Number(ta.p95) : null },
     byIntent: (intentRows.rows as { intent: string; n: string }[]).map((r) => ({ intent: r.intent, count: Number(r.n) })),
-    badSearches: (badRows.rows as Record<string, string>[]).map((r) => ({
-      query: r.query,
-      searches: Number(r.searches),
-      zeroResult: Number(r.zero_result),
-      reformulated: Number(r.reformulated),
-      negativeFeedback: Number(r.negative_feedback),
-      score: Number(r.score),
-    })),
+    badSearches: rawBadRows.map((r) => {
+      const review = reviewByQuery.get(r.query);
+      return {
+        query: r.query,
+        searches: Number(r.searches),
+        zeroResult: Number(r.zero_result),
+        reformulated: Number(r.reformulated),
+        negativeFeedback: Number(r.negative_feedback),
+        score: Number(r.score),
+        reviewStatus: (review?.status ?? "open") as BadSearchReviewStatus,
+        reviewNote: review?.note ?? null,
+        reviewedAt: review?.reviewedAt?.toISOString() ?? null,
+      };
+    }),
     coverageGaps: gaps,
   };
 }

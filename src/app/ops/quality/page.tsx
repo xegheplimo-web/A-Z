@@ -86,36 +86,88 @@ export default async function OpsQualityPage({ searchParams }: { searchParams: P
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {/* bad searches */}
-        <section className="rounded-2xl border border-line bg-ink-2/60 p-4">
-          <h2 className="text-[13px] font-semibold text-paper">Bad searches</h2>
-          <p className="mt-0.5 text-[11px] text-fog-2">score = zero×4 + reformulate×3 + neg-feedback×4 + gap×2 + low-rank-click×2 + no-click + slow</p>
-          <table className="mt-3 w-full text-left text-[12px]">
-            <thead>
-              <tr className="border-b border-line text-[10.5px] uppercase tracking-wide text-fog-2">
-                <th className="py-1.5 pr-2 font-medium">Query</th>
-                <th className="py-1.5 pr-2 text-right font-medium">n</th>
-                <th className="py-1.5 pr-2 text-right font-medium">zero</th>
-                <th className="py-1.5 pr-2 text-right font-medium">reform</th>
-                <th className="py-1.5 pr-2 text-right font-medium">neg</th>
-                <th className="py-1.5 text-right font-medium">score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {r.badSearches.length === 0 && (
-                <tr><td colSpan={6} className="py-4 text-center text-fog-2">Không có search nào tích điểm xấu trong window.</td></tr>
-              )}
-              {r.badSearches.map((b, i) => (
-                <tr key={i} className="border-b border-line/50 last:border-0">
-                  <td className="max-w-[260px] truncate py-2 pr-2 text-paper">{b.query}</td>
-                  <td className="num-tabular py-2 pr-2 text-right text-fog">{b.searches}</td>
-                  <td className="num-tabular py-2 pr-2 text-right text-fog">{b.zeroResult}</td>
-                  <td className="num-tabular py-2 pr-2 text-right text-fog">{b.reformulated}</td>
-                  <td className="num-tabular py-2 pr-2 text-right text-fog">{b.negativeFeedback}</td>
-                  <td className="num-tabular py-2 text-right font-bold text-flame-2">{b.score}</td>
+        <section id="bad-searches" className="rounded-2xl border border-line bg-ink-2/60 p-4">
+          <h2 className="text-[13px] font-semibold text-paper">Bad searches · review queue</h2>
+          <p className="mt-0.5 text-[11px] text-fog-2">
+            Telemetry chỉ phát hiện tín hiệu xấu. Human review quyết định trạng thái; chỉ <span className="text-flame-2">confirmed_bad</span> mới đủ điều kiện sang P-LEARNING-6.
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-[12px]">
+              <thead>
+                <tr className="border-b border-line text-[10.5px] uppercase tracking-wide text-fog-2">
+                  <th className="py-1.5 pr-2 font-medium">Query</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">n</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">zero</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">reform</th>
+                  <th className="py-1.5 pr-2 font-medium">Review</th>
+                  <th className="py-1.5 pr-2 text-right font-medium">score</th>
+                  <th className="py-1.5 text-right font-medium">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {r.badSearches.length === 0 && (
+                  <tr><td colSpan={7} className="py-4 text-center text-fog-2">Không có search nào tích điểm xấu trong window.</td></tr>
+                )}
+                {r.badSearches.map((b, i) => {
+                  const statusLabel = {
+                    open: "Mở",
+                    reviewed_good: "Không lỗi",
+                    confirmed_bad: "Xác nhận lỗi",
+                    ignored: "Bỏ qua",
+                    promoted_to_golden: "Golden",
+                  }[b.reviewStatus];
+                  const statusClass =
+                    b.reviewStatus === "confirmed_bad" ? "text-flame-2" :
+                    b.reviewStatus === "reviewed_good" ? "text-jade" :
+                    b.reviewStatus === "promoted_to_golden" ? "text-gold" : "text-fog-2";
+                  return (
+                    <tr key={i} className="border-b border-line/50 align-top last:border-0">
+                      <td className="max-w-[260px] py-2 pr-2 text-paper">
+                        <span className="block truncate">{b.query}</span>
+                        {b.reviewNote && <span className="mt-0.5 block max-w-[260px] truncate text-[10.5px] text-fog-2">{b.reviewNote}</span>}
+                      </td>
+                      <td className="num-tabular py-2 pr-2 text-right text-fog">{b.searches}</td>
+                      <td className="num-tabular py-2 pr-2 text-right text-fog">{b.zeroResult}</td>
+                      <td className="num-tabular py-2 pr-2 text-right text-fog">{b.reformulated}</td>
+                      <td className={`py-2 pr-2 text-[11px] font-semibold ${statusClass}`}>{statusLabel}</td>
+                      <td className="num-tabular py-2 pr-2 text-right font-bold text-flame-2">{b.score}</td>
+                      <td className="py-2 text-right">
+                        {b.reviewStatus === "promoted_to_golden" ? (
+                          <span className="text-[10.5px] text-gold">Đã khóa</span>
+                        ) : (
+                          <details className="relative inline-block text-left">
+                            <summary className="cursor-pointer select-none text-[11px] text-gold">Review</summary>
+                            <div className="mt-2 w-[250px] rounded-xl border border-line bg-ink p-3 text-left shadow-xl">
+                              <form method="post" action="/ops/quality/review" className="space-y-2">
+                                <input type="hidden" name="query" value={b.query} />
+                                <input type="hidden" name="h" value={hours} />
+                                <label className="block text-[10.5px] text-fog-2">
+                                  Ghi chú
+                                  <input
+                                    name="note"
+                                    maxLength={1000}
+                                    defaultValue={b.reviewNote ?? ""}
+                                    placeholder="Bắt buộc khi xác nhận lỗi"
+                                    className="mt-1 w-full rounded-lg border border-line-2 bg-ink-2 px-2.5 py-2 text-[11px] text-paper outline-none focus:border-gold/50"
+                                  />
+                                </label>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  <button name="status" value="confirmed_bad" className="rounded-lg border border-flame/30 px-2 py-1.5 text-[10.5px] text-flame-2">Xác nhận lỗi</button>
+                                  <button name="status" value="reviewed_good" className="rounded-lg border border-jade/30 px-2 py-1.5 text-[10.5px] text-jade">Không lỗi</button>
+                                  <button name="status" value="ignored" className="rounded-lg border border-line px-2 py-1.5 text-[10.5px] text-fog">Bỏ qua</button>
+                                  <button name="status" value="open" className="rounded-lg border border-line px-2 py-1.5 text-[10.5px] text-fog">Mở lại</button>
+                                </div>
+                              </form>
+                            </div>
+                          </details>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         {/* coverage gaps */}
@@ -150,7 +202,7 @@ export default async function OpsQualityPage({ searchParams }: { searchParams: P
 
       <p className="mt-6 text-[11px] leading-relaxed text-fog-2">
         CTR@k = clicked rank≤k / impressed rank≤k — impression chỉ ghi khi kết quả thực sự lọt viewport.
-        Bad search queue là đầu vào review, không phải nhãn benchmark — promotion sang golden cần human label (P-LEARNING-6).
+        Bad search queue là đầu vào review, không phải nhãn benchmark. P-LEARNING-5 lưu human judgment; chỉ confirmed_bad mới được P-LEARNING-6 tạo golden candidate.
       </p>
     </main>
   );

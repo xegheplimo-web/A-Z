@@ -63,7 +63,7 @@ const CANDIDATES = [
 
 async function main() {
   console.log("⏳ Clearing old data…");
-  await db.execute(sql`TRUNCATE admin_units, places, documents, place_candidates, search_traces, eval_runs, coverage_gaps, feedback RESTART IDENTITY CASCADE`);
+  await db.execute(sql`TRUNCATE admin_units, places, documents, place_candidates, search_traces, search_interactions, bad_search_reviews, eval_runs, coverage_gaps, feedback RESTART IDENTITY CASCADE`);
 
   console.log("⏳ Seeding admin graph…", ADMIN_UNITS.length);
   for (const a of ADMIN_UNITS) {
