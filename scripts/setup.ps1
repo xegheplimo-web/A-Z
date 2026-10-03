@@ -33,6 +33,15 @@ function Warn($m) { Write-Host "  [warn] $m" -ForegroundColor Yellow }
 function Die($m)  { Write-Host "  [fail] $m" -ForegroundColor Red; exit 1 }
 function Test-Cmd($name) { return $null -ne (Get-Command $name -ErrorAction SilentlyContinue) }
 
+# Under EAP=Stop, redirecting a native command's stderr (*> $null) turns stderr
+# lines into ErrorRecords that terminate the script. Run quiet native calls
+# with EAP=Continue instead (function-scoped, reverts on return).
+function Invoke-Quietly([scriptblock]$Block) {
+  $ErrorActionPreference = 'Continue'
+  & $Block *> $null
+  return $LASTEXITCODE
+}
+
 function Get-DotEnvValue([string]$Name) {
   $v = [Environment]::GetEnvironmentVariable($Name)
   if ($v) { return $v }
@@ -65,8 +74,7 @@ function Get-DbHostPort([string]$Url) {
 
 function Wait-PgReady([int]$Seconds = 60) {
   for ($i = 0; $i -lt $Seconds; $i++) {
-    docker compose exec -T db pg_isready -U postgres -d app_db *> $null
-    if ($LASTEXITCODE -eq 0) { return $true }
+    if ((Invoke-Quietly { docker compose exec -T db pg_isready -U postgres -d app_db }) -eq 0) { return $true }
     Start-Sleep -Seconds 1
   }
   return $false
@@ -85,8 +93,7 @@ if (Test-Cmd git) { Ok "git $(git --version)" } else { Warn "git not found - onl
 
 $hasDocker = $false
 if (-not $SkipDocker -and (Test-Cmd docker)) {
-  docker ps *> $null
-  if ($LASTEXITCODE -eq 0) { $hasDocker = $true; Ok "docker $(docker --version)" }
+  if ((Invoke-Quietly { docker ps }) -eq 0) { $hasDocker = $true; Ok "docker $(docker --version)" }
   else { Warn "docker CLI found but daemon is not reachable - skipping Docker steps" }
 } elseif (-not $SkipDocker) { Warn "docker not found - skipping container steps" }
 

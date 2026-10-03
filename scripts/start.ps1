@@ -31,10 +31,18 @@ function Warn($m) { Write-Host "  [warn] $m" -ForegroundColor Yellow }
 function Die($m)  { Write-Host "  [fail] $m" -ForegroundColor Red; exit 1 }
 function Test-Cmd($name) { return $null -ne (Get-Command $name -ErrorAction SilentlyContinue) }
 
+# Under EAP=Stop, redirecting a native command's stderr (*> $null) turns stderr
+# lines into ErrorRecords that terminate the script. Run quiet native calls
+# with EAP=Continue instead (function-scoped, reverts on return).
+function Invoke-Quietly([scriptblock]$Block) {
+  $ErrorActionPreference = 'Continue'
+  & $Block *> $null
+  return $LASTEXITCODE
+}
+
 if ($Production) {
   if (-not (Test-Cmd docker)) { Die "-Production requires Docker" }
-  docker ps *> $null
-  if ($LASTEXITCODE -ne 0) { Die "Docker daemon is not running" }
+  if ((Invoke-Quietly { docker ps }) -ne 0) { Die "Docker daemon is not running" }
   Info "Starting production retrieval stack"
   docker compose -f docker-compose.yml -f docker-compose.production.yml --profile production up -d --build --wait
   if ($LASTEXITCODE -ne 0) { Die "production stack failed" }
@@ -44,8 +52,7 @@ if ($Production) {
 
 $hasDocker = $false
 if (-not $SkipDocker -and (Test-Cmd docker)) {
-  docker ps *> $null
-  if ($LASTEXITCODE -eq 0) { $hasDocker = $true }
+  if ((Invoke-Quietly { docker ps }) -eq 0) { $hasDocker = $true }
 }
 
 if ($hasDocker) {
@@ -54,8 +61,7 @@ if ($hasDocker) {
   if ($LASTEXITCODE -ne 0) { Die "docker compose up -d db failed" }
   $ready = $false
   for ($i = 0; $i -lt 30; $i++) {
-    docker compose exec -T db pg_isready -U postgres -d app_db *> $null
-    if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+    if ((Invoke-Quietly { docker compose exec -T db pg_isready -U postgres -d app_db }) -eq 0) { $ready = $true; break }
     Start-Sleep -Seconds 1
   }
   if ($ready) { Ok "postgres healthy" } else { Warn "postgres not ready yet - the app will retry on its own" }

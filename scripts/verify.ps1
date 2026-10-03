@@ -26,6 +26,15 @@ function Info($m) { Write-Host ""; Write-Host "==> $m" -ForegroundColor Cyan }
 function Warn($m) { Write-Host "  [warn] $m" -ForegroundColor Yellow }
 function Test-Cmd($name) { return $null -ne (Get-Command $name -ErrorAction SilentlyContinue) }
 
+# Under EAP=Stop, redirecting a native command's stderr (*> $null) turns stderr
+# lines into ErrorRecords that terminate the script. Run quiet native calls
+# with EAP=Continue instead (function-scoped, reverts on return).
+function Invoke-Quietly([scriptblock]$Block) {
+  $ErrorActionPreference = 'Continue'
+  & $Block *> $null
+  return $LASTEXITCODE
+}
+
 $script:Results = New-Object System.Collections.Generic.List[object]
 $script:Current = ''
 
@@ -71,8 +80,8 @@ try {
   Step 'typecheck (tsc)'         { npm run typecheck }
   Step 'boundary check'          { npm run check:boundaries }
   Info 'format check (prettier) - advisory'
-  npm run format:check *> $null
-  if ($LASTEXITCODE -eq 0) {
+  $fmtRc = Invoke-Quietly { npm run format:check }
+  if ($fmtRc -eq 0) {
     $script:Results.Add([pscustomobject]@{ Step = 'format check (prettier)'; Status = 'PASS' })
   } else {
     Warn 'prettier drift exists (advisory - CI does not gate on it; normalize with npm run format)'
@@ -97,10 +106,10 @@ try {
       $h = $Matches[1]; $p = 5432; if ($Matches[2]) { $p = [int]$Matches[2] }
       $dbReady = Test-TcpPort $h $p
       if (-not $dbReady -and (Test-Cmd docker)) {
-        docker ps *> $null
-        if ($LASTEXITCODE -eq 0) {
+        $dockerUp = (Invoke-Quietly { docker ps }) -eq 0
+        if ($dockerUp) {
           Warn "Postgres not reachable at ${h}:$p - trying docker compose up -d db"
-          docker compose up -d db *> $null
+          [void](Invoke-Quietly { docker compose up -d db })
           for ($i = 0; $i -lt 30 -and -not $dbReady; $i++) {
             Start-Sleep -Seconds 1
             $dbReady = Test-TcpPort $h $p
