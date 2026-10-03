@@ -55,6 +55,21 @@ async function main() {
     await assert.rejects(createGoldenCandidate({ querySafe: redactText(q1, 500) }), /đã có candidate/);
     console.log("PASS confirmed_bad → draft, no duplicate active");
 
+    // --- VN100-0 label contract: vocabulary/shape vi phạm reject tại write-time ---
+    await assert.rejects(setGoldenLabels(cand.id, { freshnessRequirement: "bogus" }), /freshness .* ngoài enum/);
+    await assert.rejects(setGoldenLabels(cand.id, { authorityRequirement: "high" }), /authority .* ngoài enum/);
+    await assert.rejects(setGoldenLabels(cand.id, { intent: "made_up_intent" }), /intent .* không thuộc contract/);
+    await assert.rejects(setGoldenLabels(cand.id, { geoScope: { radius_m: 2000 } }), /radius_m chỉ có nghĩa kèm anchor/);
+    await assert.rejects(setGoldenLabels(cand.id, { geoScope: { anchor: {} } }), /anchor cần label hoặc lat\+lng/);
+    await assert.rejects(setGoldenLabels(cand.id, { geoScope: { anchor: { label: "Neo" }, radius_m: -5 } }), /radius_m phải là số > 0/);
+    await assert.rejects(setGoldenLabels(cand.id, { relevanceLabels: { "X": 5 } }), /ngoài thang 0\.\.3/);
+    await assert.rejects(setGoldenLabels(cand.id, { expectedEntities: ["A"], abstentionExpected: true }), /mâu thuẫn/);
+    {
+      const after = await db.select().from(goldenCandidates).where(eq(goldenCandidates.id, cand.id));
+      assert.equal(after[0].status, "draft", "violation không được đổi trạng thái");
+    }
+    console.log("PASS VN100-0 contract violations rejected at write-time");
+
     // --- approve thiếu labels → reject ---
     await setGoldenLabels(cand.id, { intent: "local_search" });
     await assert.rejects(approveGoldenCandidate(cand.id), /thiếu label bắt buộc/);
@@ -62,6 +77,10 @@ async function main() {
 
     // --- labels đầy đủ → labeled → approved → benchmark visible ---
     await setGoldenLabels(cand.id, FULL);
+    {
+      const [stored] = await db.select().from(goldenCandidates).where(eq(goldenCandidates.id, cand.id));
+      assert.equal(stored.freshnessRequirement, "high", "alias 'current' phải normalize → 'high'");
+    }
     const approved = await approveGoldenCandidate(cand.id);
     assert.equal(approved.status, "approved");
     const bench = await exportGoldenBenchmark();

@@ -112,7 +112,7 @@ export function fromWire(input: unknown, backendId = "search-router"): RetrieveR
       specialties: strs(p.specialties ?? [], `${path}.specialties`), rating: numN(p.rating, `${path}.rating`), reviewCount: num(p.review_count ?? 0, `${path}.review_count`),
       priceLabel: strN(p.price_label, `${path}.price_label`), phone: strN(p.phone, `${path}.phone`), hours: strN(p.hours, `${path}.hours`),
       openNow: boolN(p.open_now, `${path}.open_now`), distanceKm: numN(p.distance_km, `${path}.distance_km`), distanceLabel: strN(p.distance_label, `${path}.distance_label`),
-      image: strN(p.image, `${path}.image`), source: str(p.source, `${path}.source`), verified: bool(p.verified, `${path}.verified`), note: strN(p.note, `${path}.note`),
+      image: strN(p.image, `${path}.image`), source: str(p.source, `${path}.source`), verified: bool(p.verified, `${path}.verified`), verificationLevel: str(p.verification_level ?? "observed", `${path}.verification_level`), note: strN(p.note, `${path}.note`),
       score: num(p.score ?? 0, `${path}.score`), lat: numN(p.lat, `${path}.lat`), lng: numN(p.lng, `${path}.lng`), updatedAt: strN(p.updated_at, `${path}.updated_at`),
       why: strs(p.why ?? [], `${path}.why`),
     };

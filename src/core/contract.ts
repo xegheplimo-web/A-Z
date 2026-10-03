@@ -97,6 +97,8 @@ export interface PlaceDTO {
   image: string | null;
   source: string;
   verified: boolean;
+  /** observed < corroborated < verified < authoritative — brain emits, facade passes through */
+  verificationLevel: string;
   note: string | null;
   score: number;
   lat: number | null;

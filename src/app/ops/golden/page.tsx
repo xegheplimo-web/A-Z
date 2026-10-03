@@ -4,15 +4,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { opsAccessOk } from "@/lib/ops";
-import { listGoldenCandidates, BENCHMARK_STATUSES } from "@/lib/golden";
+import { listGoldenCandidates, BENCHMARK_STATUSES, GOLDEN_FRESHNESS, GOLDEN_AUTHORITY, type GoldenGeoScope } from "@/lib/golden";
+import { INTENTS } from "@/core/contract";
 import type { GoldenCandidateRow } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Golden Cases · Ops", robots: { index: false, follow: false } };
-
-const INTENTS = ["local_search", "legal", "admin_info", "market_price", "weather", "compare", "general"];
-const FRESHNESS = ["current", "static", "slow", "medium", "high", "realtime"];
-const AUTHORITY = ["corroborated_or_better", "verified_or_better", "authoritative", "any"];
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Nháp",
@@ -30,8 +27,14 @@ const STATUS_CLASS: Record<string, string> = {
 };
 
 function LabelForm({ c, op, extra }: { c: GoldenCandidateRow; op: "label" | "revise"; extra?: string }) {
-  const geo = (c.geoScope as { admin_ids?: string[] } | null)?.admin_ids?.join(", ") ?? "";
+  const g = (c.geoScope as GoldenGeoScope | null) ?? {};
+  const geo = g.admin_ids?.join(", ") ?? "";
+  const anchorLabel = g.anchor?.label ?? "";
+  const radius = g.radius_m != null ? String(g.radius_m) : "";
   const ents = Array.isArray(c.expectedEntities) ? (c.expectedEntities as string[]).join(", ") : "";
+  const rel = Object.entries((c.relevanceLabels as Record<string, number> | null) ?? {})
+    .map(([k, v]) => `${k}:${v}`)
+    .join(", ");
   return (
     <form method="post" action="/ops/golden/actions" className="mt-2 space-y-2 text-[11px]">
       <input type="hidden" name="op" value={op} />
@@ -50,19 +53,28 @@ function LabelForm({ c, op, extra }: { c: GoldenCandidateRow; op: "label" | "rev
         <label className="col-span-2 text-fog-2">Geo admin_ids (phẩy)
           <input name="geo" defaultValue={geo} placeholder="new:07681" className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper" />
         </label>
+        <label className="text-fog-2">Anchor label (query &ldquo;gần X&rdquo;)
+          <input name="anchor" defaultValue={anchorLabel} placeholder="Neo" className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper" />
+        </label>
+        <label className="text-fog-2">Radius (m) — chỉ kèm anchor
+          <input name="radius" defaultValue={radius} placeholder="2000" inputMode="numeric" className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper" />
+        </label>
         <label className="col-span-2 text-fog-2">Expected entities (phẩy) — trống nếu abstain
           <input name="entities" defaultValue={ents} className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper" />
+        </label>
+        <label className="col-span-2 text-fog-2">Relevance labels — entity:grade 0..3
+          <input name="relevance" defaultValue={rel} placeholder="Nhà thuốc ABC:3, Quán ăn X:0" className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper" />
         </label>
         <label className="text-fog-2">Freshness
           <select name="freshness" defaultValue={c.freshnessRequirement ?? ""} className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper">
             <option value="">—</option>
-            {FRESHNESS.map((f) => <option key={f} value={f}>{f}</option>)}
+            {GOLDEN_FRESHNESS.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
         </label>
         <label className="text-fog-2">Authority
           <select name="authority" defaultValue={c.authorityRequirement ?? ""} className="mt-0.5 w-full rounded-lg border border-line-2 bg-ink-2 px-2 py-1.5 text-paper">
             <option value="">—</option>
-            {AUTHORITY.map((a) => <option key={a} value={a}>{a}</option>)}
+            {GOLDEN_AUTHORITY.map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </label>
         <label className="col-span-2 flex items-center gap-2 text-fog-2">

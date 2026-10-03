@@ -28,12 +28,34 @@ const csv = (v: FormDataEntryValue | null) =>
 
 function labelsFrom(form: FormData): GoldenLabels {
   const geo = csv(form.get("geo"));
+  const anchorLabel = String(form.get("anchor") ?? "").trim();
+  const radiusRaw = String(form.get("radius") ?? "").trim();
   const entities = csv(form.get("entities"));
+  // "Tên entity:3, Khác:0" → {entity: grade}
+  const relevance: Record<string, number> = {};
+  for (const pair of csv(form.get("relevance"))) {
+    const idx = pair.lastIndexOf(":");
+    if (idx > 0) {
+      const grade = Number(pair.slice(idx + 1));
+      relevance[pair.slice(0, idx).trim()] = grade;
+    } else {
+      relevance[pair] = Number.NaN; // validateGoldenLabels sẽ reject grade NaN
+    }
+  }
+  const geoScope: GoldenLabels["geoScope"] =
+    !geo.length && !anchorLabel && !radiusRaw
+      ? null
+      : {
+          ...(geo.length ? { admin_ids: geo } : {}),
+          ...(anchorLabel ? { anchor: { label: anchorLabel } } : {}),
+          ...(radiusRaw ? { radius_m: Number(radiusRaw) } : {}),
+        };
   return {
     intent: String(form.get("intent") ?? "") || null,
-    geoScope: geo.length ? { admin_ids: geo } : null,
+    geoScope,
     specialty: String(form.get("specialty") ?? "") || null,
     expectedEntities: entities.length ? entities : null,
+    relevanceLabels: Object.keys(relevance).length ? relevance : null,
     freshnessRequirement: String(form.get("freshness") ?? "") || null,
     authorityRequirement: String(form.get("authority") ?? "") || null,
     abstentionExpected: form.get("abstain") === "on" || form.get("abstain") === "true",
